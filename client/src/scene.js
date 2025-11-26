@@ -141,6 +141,16 @@ export async function createScene(engine, canvas) {
     }
   });
 
+  // Enforce camera speed (fix for "way too fast" on first load)
+  // This ensures that even if controls are re-attached or reset, the speed stays correct
+  scene.registerBeforeRender(() => {
+    if (scene.activeCamera && Math.abs(scene.activeCamera.speed - SCENE_CONFIG.CAMERA_SPEED) > 0.001) {
+      // Only log if significant difference to avoid spam
+      console.log(`[Scene] Enforcing camera speed: ${SCENE_CONFIG.CAMERA_SPEED} (was ${scene.activeCamera.speed})`);
+      scene.activeCamera.speed = SCENE_CONFIG.CAMERA_SPEED;
+    }
+  });
+
   // Force scene to update all meshes
   scene.getEngine().clear(scene.clearColor, true, true, true);
 

@@ -18,6 +18,10 @@ export default defineConfig({
                     babylon: ['@babylonjs/core', '@babylonjs/loaders'],
                     xterm: ['xterm', 'xterm-addon-fit']
                 }
+            },
+            input: {
+                main: 'index.html',
+                editor: 'editor.html'
             }
         }
     },
