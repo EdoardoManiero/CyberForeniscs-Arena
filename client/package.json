@@ -3,7 +3,6 @@
     "version": "1.0.0",
     "description": "Client for CyberForensics Arena",
     "type": "module",
-    "homepage": "https://<USERNAME>.github.io/CyberForensics-Arena",
     "scripts": {
         "dev": "vite",
         "build": "vite build",

@@ -95,14 +95,14 @@ export async function createScene(engine, canvas) {
   console.log('Model loaded and scene ready');
 
   // Initialize highlight layer
-  highlightLayer = new BABYLON.HighlightLayer('interactableHL', scene, 
+  highlightLayer = new BABYLON.HighlightLayer('interactableHL', scene,
     SCENE_CONFIG.HIGHLIGHT_CONFIG);
   highlightLayer.outerGlow = true;
   highlightLayer.innerGlow = true;
 
   // Setup meshes
   setupMeshes(meshes, scene);
-  
+
   // Ensure all meshes are visible and enabled
   // This is critical for first-time login when meshes might not be properly initialized
   meshes.forEach(mesh => {
@@ -120,19 +120,19 @@ export async function createScene(engine, canvas) {
 
   // Setup camera spawn position (do this after meshes are set up)
   setupCameraSpawn(scene, camera);
-  
+
   // Ensure camera is properly attached and active
   scene.activeCamera = camera;
-  
+
   // Ensure canvas can receive focus for keyboard input
   if (canvas && !canvas.hasAttribute('tabindex')) {
     canvas.setAttribute('tabindex', '0');
   }
-  
+
   // Camera controls are already attached in createCamera()
   // Don't re-attach here to avoid breaking the input manager
   // The controls will be verified and focused in main.js after render loop starts
-  
+
   // Force all meshes to update their world matrices
   scene.meshes.forEach(mesh => {
     if (mesh && !mesh.name.startsWith('__')) {
@@ -140,10 +140,10 @@ export async function createScene(engine, canvas) {
       mesh.refreshBoundingInfo(true);
     }
   });
-  
+
   // Force scene to update all meshes
   scene.getEngine().clear(scene.clearColor, true, true, true);
-  
+
   // Force initial render to ensure scene is visible
   // This is critical for first-time login when canvas might not have rendered yet
   scene.render();
@@ -164,11 +164,11 @@ export async function createScene(engine, canvas) {
     camera,
     canvas
   };
-  
+
   if (isMobile()) {
-      setupMobile(scene, camera);
+    setupMobile(scene, camera);
   }
-  
+
   console.log('Scene created successfully');
   return scene;
 }
@@ -177,82 +177,82 @@ export function isMobile() {
   // Check for touch capability AND small screen size
   const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   const isSmallScreen = window.innerWidth <= 900;
-  
+
   // Also check user agent as fallback
   const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  
+
   return (hasTouch && isSmallScreen) || mobileUA;
 }
 
 function setupMobile(scene, camera) {
   // Initialize joysticks for mobile
   let leftJoystick, rightJoystick;
-  
+
   if (isMobile()) {
     // Movement joystick (left side)
     leftJoystick = new BABYLON.VirtualJoystick(true);
-    
+
     // Camera rotation joystick (right side)
     rightJoystick = new BABYLON.VirtualJoystick(false);
-    
+
     //Mobile tap interaction
     scene.onPointerObservable.add((pointerInfo) => {
-        if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) {
-            // Get tap position
-            const pickResult = scene.pick(
-                scene.pointerX, 
-                scene.pointerY,
-                (mesh) => allInteractableMeshes.includes(mesh) // Only pick interactable meshes
-            );
-            
-            if (pickResult.hit && pickResult.pickedMesh) {
-                console.log('Mobile tap on:', pickResult.pickedMesh.name);
-                // Emit the same event as desktop interaction
-                eventBus.publish('MESH_CLICKED', { 
-                    meshName: pickResult.pickedMesh.name,
-                    mesh: pickResult.pickedMesh
-                });
-            }
+      if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+        // Get tap position
+        const pickResult = scene.pick(
+          scene.pointerX,
+          scene.pointerY,
+          (mesh) => allInteractableMeshes.includes(mesh) // Only pick interactable meshes
+        );
+
+        if (pickResult.hit && pickResult.pickedMesh) {
+          console.log('Mobile tap on:', pickResult.pickedMesh.name);
+          // Emit the same event as desktop interaction
+          eventBus.publish('MESH_CLICKED', {
+            meshName: pickResult.pickedMesh.name,
+            mesh: pickResult.pickedMesh
+          });
         }
+      }
     });
-    
+
     // Movement update loop
     scene.registerBeforeRender(() => {
-        if (leftJoystick && leftJoystick.pressed) {
-            const joystickX = leftJoystick.deltaPosition.x;
-            const joystickY = leftJoystick.deltaPosition.y;
-            
-            let forward = camera.getDirection(BABYLON.Axis.Z);
-            forward.y = 0;
-            forward.normalize();
-            
-            let right = camera.getDirection(BABYLON.Axis.X);
-            right.y = 0;
-            right.normalize();
-            
-            const direction = forward.scale(joystickY).add(right.scale(joystickX));
-            direction.normalize();
-            
-            camera.cameraDirection.copyFrom(direction.scale(0.02));
-        } else {
-            camera.cameraDirection.copyFrom(BABYLON.Vector3.Zero());
-        }
-        
-        if (rightJoystick && rightJoystick.pressed) {
-            camera.rotation.y += rightJoystick.deltaPosition.x * 0.01;
-            camera.rotation.x += rightJoystick.deltaPosition.y * 0.01;
-        }
+      if (leftJoystick && leftJoystick.pressed) {
+        const joystickX = leftJoystick.deltaPosition.x;
+        const joystickY = leftJoystick.deltaPosition.y;
+
+        let forward = camera.getDirection(BABYLON.Axis.Z);
+        forward.y = 0;
+        forward.normalize();
+
+        let right = camera.getDirection(BABYLON.Axis.X);
+        right.y = 0;
+        right.normalize();
+
+        const direction = forward.scale(joystickY).add(right.scale(joystickX));
+        direction.normalize();
+
+        camera.cameraDirection.copyFrom(direction.scale(0.02));
+      } else {
+        camera.cameraDirection.copyFrom(BABYLON.Vector3.Zero());
+      }
+
+      if (rightJoystick && rightJoystick.pressed) {
+        camera.rotation.y += rightJoystick.deltaPosition.x * 0.01;
+        camera.rotation.x += rightJoystick.deltaPosition.y * 0.01;
+      }
     });
   }
 
-  
+
   scene.onPointerObservable.add((pointerInfo) => {
     if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) {
-        const pickedMesh = pointerInfo.pickInfo.pickedMesh;
-        // Handle interaction (works for both mouse and touch)
-        if (pickedMesh && allInteractableMeshes.includes(pickedMesh)) { 
-            eventBus.publish('MESH_CLICKED', { meshName: pickedMesh.name });
-        }
+      const pickedMesh = pointerInfo.pickInfo.pickedMesh;
+      // Handle interaction (works for both mouse and touch)
+      if (pickedMesh && allInteractableMeshes.includes(pickedMesh)) {
+        eventBus.publish('MESH_CLICKED', { meshName: pickedMesh.name });
+      }
     }
   });
 }
@@ -282,7 +282,7 @@ function createCamera(scene, canvas) {
   camera.speed = SCENE_CONFIG.CAMERA_SPEED;
   camera.angularSensibility = SCENE_CONFIG.CAMERA_SENSITIVITY;
   console.log('[Scene] Camera created with speed:', camera.speed);
-  
+
   // Set up keyboard controls BEFORE attaching controls
   // This ensures keys are registered when attachControl is called
   camera.keysUp.push(87); // W
@@ -297,7 +297,7 @@ function createCamera(scene, canvas) {
   // Re-set speed after attaching controls (attachControl might reset it)
   camera.speed = SCENE_CONFIG.CAMERA_SPEED;
   console.log('[Scene] Camera speed re-set after attachControl:', camera.speed);
-  
+
   // Ensure canvas can receive focus for keyboard input
   if (canvas && typeof canvas.focus === 'function') {
     canvas.setAttribute('tabindex', '0');
@@ -397,7 +397,7 @@ function setupAnimationLoop(scene) {
     if (!permanentHighlightedMeshes?.length) return;
 
     pulseTime += HIGHLIGHT_COLOR.PULSE_SPEED;
-    const pulseIntensity = HIGHLIGHT_COLOR.PULSE_BASE + 
+    const pulseIntensity = HIGHLIGHT_COLOR.PULSE_BASE +
       Math.sin(pulseTime) * HIGHLIGHT_COLOR.PULSE_RANGE;
 
     permanentHighlightedMeshes.forEach(mesh => {
@@ -439,7 +439,7 @@ function setupCameraSpawn(scene, camera) {
   // Fallback: place above scene
   const { min, max, center } = getSceneBounds(scene);
   console.log('Scene bounds:', { min, max, center });
-  
+
   const rayStart = new BABYLON.Vector3(center.x, max.y + 20, center.z);
   const ray = new BABYLON.Ray(rayStart, new BABYLON.Vector3(0, -1, 0), (max.y - min.y) + 100);
   const hit = scene.pickWithRay(ray, m => m.isEnabled() && m.getTotalVertices?.() > 0);
@@ -452,7 +452,7 @@ function setupCameraSpawn(scene, camera) {
     camera.position = SCENE_CONFIG.CAMERA_START_POS.clone();
     console.log('Camera using default position:', camera.position);
   }
-  
+
   // Ensure camera target is set correctly after positioning
   camera.setTarget(SCENE_CONFIG.CAMERA_TARGET_POS);
   console.log('Camera target set to:', SCENE_CONFIG.CAMERA_TARGET_POS);

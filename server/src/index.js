@@ -46,6 +46,11 @@ if (process.env.NODE_ENV === 'production' && SESSION_SECRET === 'dev_secret_do_n
 app.use(helmet());
 app.use(compression());
 
+// Trust proxy (required for secure cookies on Render/Heroku)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(cors({
   origin: CORS_ORIGIN,
@@ -66,7 +71,7 @@ app.use(session({
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   }
 }));
