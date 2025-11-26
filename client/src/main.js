@@ -261,23 +261,9 @@ async function onTutorialComplete(skipped = false) {
         appState.canvas.focus();
         console.log('[Main] Camera controls attached immediately after scenario intro, speed:', camera.speed);
 
-        // Also attach after delay as backup
-        setTimeout(() => {
-          if (appState.scene && appState.scene.activeCamera && appState.canvas) {
-            const backupCamera = appState.scene.activeCamera;
-            // Ensure speed is still correct
-            backupCamera.speed = 0.2;
-            // Check if controls are attached
-            if (!backupCamera._attachedCanvas) {
-              backupCamera.detachControl(appState.canvas);
-              backupCamera.attachControl(appState.canvas, true);
-            }
-            // Re-set speed after attaching controls
-            backupCamera.speed = 0.2;
-            appState.canvas.focus();
-            console.log('[Main] Camera controls verified after scenario intro (backup), speed:', backupCamera.speed);
-          }
-        }, 300);
+        // Also attach after delay as backup - REMOVED to prevent conflict with ScenarioIntroManager
+        // ScenarioIntroManager handles its own control attachment/detachment
+        console.log('[Main] Handing over control to ScenarioIntroManager (if applicable)');
       }
     } else {
       console.error('Failed to initialize task system');
