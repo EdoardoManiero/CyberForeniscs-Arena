@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Demo Ufficio Forense 3D</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel='icon' type='image/png' href='\public\favicon.png'>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="js/miniGames/miniGames.css">
+</head>
+
+<body>
+  <!-- TASK HUD  fancy + collapsabile -->
+  <!-- Legacy HUD Removed -->
+
+
+  <!-- Toasts -->
+  <div id="toastContainer"></div>
+
+
+
+  <!-- canvas con focus da tastiera -->
+  <canvas id="renderCanvas" tabindex="0"></canvas>
+  <div id="crosshair"></div>
+
+  <div id="consoleContainer">
+    <div id="consoleHeader">
+      <span>Console Forense (Simulata)</span>
+      <button id="closeConsoleBtn">X</button>
+    </div>
+    <div id="terminal"></div>
+  </div>
+
+  <!-- Tutorial Overlay -->
+  <div id="tutorial-overlay">
+    <div id="tutorial-card">
+      <div id="tutorial-modal">
+        <h2 id="t-title">Benvenuto</h2>
+        <p id="t-text">Muoviti con <b>WASD</b> e guarda col mouse.</p>
+        <div class="tutorial-buttons">
+          <button id="t-skip">Skip Tutorial</button>
+          <button id="t-next">Avanti</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Editor Link Removed -->
+
+  <script type="module" src="src/main.js"></script>
+</body>
+
+</html>

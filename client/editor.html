@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scenario Editor - CyberForensics Arena</title>
+    <link rel="stylesheet" href="src/editor/editor.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div id="app">
+        <header class="editor-header">
+            <h1><i class="fa-solid fa-pen-to-square"></i> Scenario Editor</h1>
+            <div class="header-controls">
+                <button id="saveBtn" class="btn btn-primary"><i class="fa-solid fa-save"></i> Save All</button>
+                <a href="/" class="btn btn-secondary"><i class="fa-solid fa-gamepad"></i> Back to Game</a>
+            </div>
+        </header>
+
+        <div class="editor-container">
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>Scenarios</h2>
+                    <button id="addScenarioBtn" class="btn btn-small"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <ul id="scenarioList" class="scenario-list">
+                    <!-- List items injected here -->
+                </ul>
+            </aside>
+
+            <main class="main-content">
+                <div id="editorForm" class="editor-form hidden">
+                    <div class="form-group">
+                        <label>ID</label>
+                        <input type="text" id="scenarioId" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="scenarioTitle">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="scenarioDesc"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Introduction</label>
+                        <textarea id="scenarioIntro"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Badge Name</label>
+                        <input type="text" id="scenarioBadge">
+                    </div>
+                    <div class="form-group">
+                        <label>Interactable Objects (comma separated)</label>
+                        <textarea id="scenarioObjects"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Custom Commands (JSON)</label>
+                        <textarea id="scenarioCommands" class="code-editor"
+                            style="font-family: monospace; min-height: 150px;"></textarea>
+                    </div>
+
+                    <div class="section-header">
+                        <h3>Tasks</h3>
+                        <button id="addTaskBtn" class="btn btn-small"><i class="fa-solid fa-plus"></i> Add Task</button>
+                    </div>
+                    <div id="taskList" class="task-list">
+                        <!-- Tasks injected here -->
+                    </div>
+                </div>
+
+                <div id="emptyState" class="empty-state">
+                    <p>Select a scenario to edit or create a new one.</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script type="module" src="src/editor/EditorApp.js"></script>
+</body>
+
+</html>

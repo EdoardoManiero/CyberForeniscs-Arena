@@ -1,0 +1,371 @@
+{
+  "file_system_forensic": {
+    "id": "file_system_forensic",
+    "title": "File System Forensic",
+    "description": "Analyze storage devices and find the evidence",
+    "introduction": "A suspicious hard disk has been seized. You must mount it, examine the file system, and find the hidden evidence. Use Linux commands to discover what happened.",
+    "badge": "File System Forensic Expert",
+    "interactableObjects": [
+      "HD1-01_HD-1_0",
+      "LinuxComputer"
+    ],
+    "customCommands": [],
+    "tasks": [
+      {
+        "id": "fs_task_1",
+        "title": "Connect the hard disk to the workstation",
+        "details": "Click on the hard disk to physically connect it to the forensic PC",
+        "points": 10,
+        "checkType": "interaction",
+        "interactionTarget": "HD1-01_HD-1_0",
+        "onInteract": {
+          "action": "attach_device",
+          "deviceName": "sdb",
+          "deviceType": "disk",
+          "message": " Hard disk connected as /dev/sdb\nUse 'lsblk' to display available devices",
+          "mountContent": {
+            "suspicious.log": "2024-10-15 03:45:12 - Unauthorized access attempt\n2024-10-15 03:45:34 - Login from 192.168.1.50\n2024-10-15 03:47:21 - File system modified: /etc/shadow\npassword: forensic2024",
+            "deleted_files.txt": "Recovered files:\n- secret_document.pdf (deleted 2024-10-15 04:12)\n- evidence.docx (deleted 2024-10-15 04:13)",
+            "system_info.txt": "System: Ubuntu 22.04 LTS\nKernel: 5.15.0-89-generic\nLast boot: 2024-10-15 03:30:00"
+          }
+        },
+        "hintCost": 2,
+        "checkCommand": null,
+        "checkArgs": null
+      },
+      {
+        "id": "fs_task_2",
+        "title": "List connected devices",
+        "details": "Use 'lsblk' to see available disks",
+        "points": 15,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 3,
+        "checkCommand": "lsblk",
+        "checkArgs": []
+      },
+      {
+        "id": "fs_task_3",
+        "title": "Mount the device",
+        "details": "Use 'mount /dev/sdb1 /mnt/evidence' to mount the partition",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "checkCommand": "mount",
+        "checkArgs": [
+          "/dev/sdb1",
+          "/mnt/evidence"
+        ]
+      },
+      {
+        "id": "fs_task_4",
+        "title": "Explore the contents",
+        "details": "Use 'ls /mnt/evidence' to see files on the disk",
+        "points": 15,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 3,
+        "checkCommand": "ls",
+        "checkArgs": [
+          "/mnt/evidence"
+        ]
+      },
+      {
+        "id": "fs_task_5",
+        "title": "Search for suspicious files",
+        "details": "Use 'cat /mnt/evidence/suspicious.log' to read the log",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "checkCommand": "cat",
+        "checkArgs": [
+          "/mnt/evidence/suspicious.log"
+        ]
+      },
+      {
+        "id": "fs_task_6",
+        "title": "Search for password in the log",
+        "details": "Use 'grep password /mnt/evidence/suspicious.log'",
+        "points": 25,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 5,
+        "checkCommand": "grep",
+        "checkArgs": [
+          "password",
+          "/mnt/evidence/suspicious.log"
+        ]
+      }
+    ]
+  },
+  "network_forensic": {
+    "id": "network_forensic",
+    "title": "Network Forensic",
+    "description": "Analyze network traffic and system logs",
+    "introduction": "A server has been compromised. You need to analyze authentication logs and network traffic to identify the attacker. First, you must trace the signal to locate the server.",
+    "badge": "Network Forensic Expert",
+    "interactableObjects": [
+      "Server",
+      "LinuxComputer"
+    ],
+    "customCommands": [
+      {
+        "name": "trace-connection",
+        "description": "Trace signal to remote server",
+        "type": "minigame",
+        "gameType": "signal-tracing",
+        "output": "[*] Initiating Network Traffic Analysis... [TARGET: Identify C2 IP Address]",
+        "onSuccess": "Trace Complete. Target IP Identified: 10.0.0.5. Use 'nmap 10.0.0.5' to scan the target.",
+        "nextTask": "scan-target"
+      },
+      {
+        "name": "nmap",
+        "description": "Network exploration tool and security / port scanner",
+        "type": "command",
+        "output": "Scanning 10.0.0.5...\nPORT    STATE SERVICE\n22/tcp  open  ssh\n80/tcp  open  http\n443/tcp open  https\n\nVulnerability detected on port 22 (SSH-2.0-OpenSSH_7.6p1)."
+      }
+    ],
+    "tasks": [
+      {
+        "id": "net_task_0",
+        "title": "Trace signal to server",
+        "details": "Use 'trace-connection' to locate the remote server",
+        "points": 10,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 2,
+        "checkCommand": "trace-connection",
+        "checkArgs": []
+      },
+      {
+        "id": "net_task_1",
+        "title": "Scan the target IP",
+        "details": "Use 'nmap 10.0.0.5' to scan the identified target",
+        "points": 10,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 2,
+        "checkCommand": "nmap",
+        "checkArgs": [
+          "10.0.0.5"
+        ]
+      },
+      {
+        "id": "net_task_2",
+        "title": "Connect to the remote server",
+        "details": "Click on the server to establish an SSH connection",
+        "points": 10,
+        "checkType": "interaction",
+        "interactionTarget": "Server",
+        "onInteract": {
+          "action": "attach_device",
+          "deviceName": "remote_server",
+          "deviceType": "remote",
+          "mountPoint": "/var/log/network",
+          "message": " Connected to server 10.0.0.5 via SSH\nLogs available. Use 'ls /var/log/network'",
+          "mountContent": {
+            "auth.log": "Oct 15 03:45:10 server sshd[1234]: Failed password for admin from 192.168.1.50\nOct 15 03:45:15 server sshd[1234]: Failed password for admin from 192.168.1.50\nOct 15 03:45:23 server sshd[1234]: Accepted password for admin from 192.168.1.50",
+            "network.pcap": "[Binary packet capture - 15MB]\nHTTP requests to suspicious domains detected",
+            "firewall.log": "DENY 192.168.1.100 -> 10.0.0.5:3389 [RDP]\nALLOW 192.168.1.50 -> 10.0.0.5:22 [SSH]"
+          }
+        },
+        "hintCost": 2,
+        "checkCommand": null,
+        "checkArgs": null
+      },
+      {
+        "id": "net_task_3",
+        "title": "List system logs",
+        "details": "The remote server automatically mounts logs in /var/log/network. Use ls to explore his content.",
+        "points": 15,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 3,
+        "checkCommand": "ls",
+        "checkArgs": [
+          "/var/log/network"
+        ]
+      },
+      {
+        "id": "net_task_4",
+        "title": "Read authentication logs",
+        "details": "Use 'cat /var/log/network/auth.log'",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "checkCommand": "cat",
+        "checkArgs": [
+          "/var/log/network/auth.log"
+        ]
+      },
+      {
+        "id": "net_task_5",
+        "title": "Search for failed SSH attempts",
+        "details": "Use 'grep \"Failed password\" /var/log/network/auth.log'",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "checkCommand": "grep",
+        "checkArgs": [
+          "Failed password",
+          "/var/log/network/auth.log"
+        ]
+      },
+      {
+        "id": "net_task_6",
+        "title": "Analyze packet capture",
+        "details": "Use 'tcpdump' to see captured traffic statistics",
+        "points": 25,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 5,
+        "checkCommand": "tcpdump",
+        "checkArgs": []
+      }
+    ]
+  },
+  "memory_forensic": {
+    "id": "memory_forensic",
+    "title": "Memory Forensic",
+    "description": "Analyze RAM memory dump to find artifacts",
+    "introduction": "A RAM memory dump contains traces of malware. Analyze it using forensic tools to discover what malicious processes were running.",
+    "badge": "Memory Forensic Expert",
+    "interactableObjects": [
+      "HD2-01_HD-2_0",
+      "LinuxComputer"
+    ],
+    "customCommands": [
+      {
+        "name": "memdump-info",
+        "description": "Display memory dump metadata and statistics",
+        "output": "Memory Dump Analysis\n====================\nSize: 8GB\nOS: Windows 10 x64\nCaptured: 2024-10-15 03:45:00\nHash: a7f3e8c9d2b1f4e6"
+      },
+      {
+        "name": "find-malware",
+        "description": "Scan for malicious signatures in memory",
+        "type": "minigame",
+        "gameType": "decryption",
+        "output": "[*] Scanning memory for malware signatures...\n[!] Found 3 suspicious processes:\n  - PID 1234: suspicious.exe (RISK: HIGH)\n  - PID 5678: malware.dll (RISK: CRITICAL)\n  - PID 9012: keylogger.sys (RISK: CRITICAL)"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "mem_task_1",
+        "title": "Connect the HD with memory dump",
+        "details": "Click on the hard disk containing the RAM dump",
+        "points": 10,
+        "checkType": "interaction",
+        "interactionTarget": "HD2-01",
+        "onInteract": {
+          "action": "attach_device",
+          "deviceName": "sdc",
+          "deviceType": "disk",
+          "size": "16G",
+          "message": " Device connected as /dev/sdc\nContains 8GB memory dump",
+          "mountContent": {
+            "memory.dmp": "[Binary memory dump - 8GB]\nWindows 10 x64 memory image",
+            "process_list.txt": "PID 1234 - suspicious.exe\nPID 5678 - malware.dll\nPID 9012 - keylogger.sys\nPID 4321 - backdoor.exe",
+            "registry_hives.txt": "HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\n- Malware: C:\\\\Windows\\\\Temp\\\\evil.exe"
+          }
+        },
+        "hintCost": 2,
+        "checkCommand": null,
+        "checkArgs": null
+      },
+      {
+        "id": "mem_task_2",
+        "title": "Verify devices",
+        "details": "Use 'lsblk' to confirm the connected device",
+        "points": 15,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 3,
+        "checkCommand": "lsblk",
+        "checkArgs": []
+      },
+      {
+        "id": "mem_task_3",
+        "title": "Mount the device",
+        "details": "Use 'mount /dev/sdc1 /mnt/memdump'",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "checkCommand": "mount",
+        "checkArgs": [
+          "/dev/sdc1",
+          "/mnt/memdump"
+        ]
+      },
+      {
+        "id": "mem_task_4",
+        "title": "List dump files",
+        "details": "Use 'ls /mnt/memdump'",
+        "points": 15,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 3,
+        "checkCommand": "ls",
+        "checkArgs": [
+          "/mnt/memdump"
+        ]
+      },
+      {
+        "id": "mem_task_5",
+        "title": "Analyze processes",
+        "details": "Use 'cat /mnt/memdump/process_list.txt'",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "checkCommand": "cat",
+        "checkArgs": [
+          "/mnt/memdump/process_list.txt"
+        ]
+      },
+      {
+        "id": "mem_task_6",
+        "title": "Get memory dump metadata",
+        "details": "Use 'memdump-info' to display memory dump analysis and statistics",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "checkCommand": "memdump-info",
+        "checkArgs": []
+      },
+      {
+        "id": "mem_task_7",
+        "title": "Scan for malicious signatures",
+        "details": "Use 'find-malware' to identify suspicious processes and malware in memory",
+        "points": 25,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 5,
+        "checkCommand": "find-malware",
+        "checkArgs": []
+      }
+    ]
+  }
+}

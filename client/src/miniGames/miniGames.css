@@ -1,0 +1,488 @@
+/* Mini-game Overlay */
+#mini-game-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 10000;
+    /* Above everything else */
+    display: none;
+    /* Hidden by default */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Courier New', monospace;
+    color: #0f0;
+    pointer-events: auto;
+}
+
+#mini-game-overlay.active {
+    display: flex;
+}
+
+.mini-game-container {
+    position: relative;
+    width: 1000px;
+    height: 600px;
+    background-color: #111;
+    border: 2px solid #0f0;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    margin-left: 10%;
+}
+
+.mini-game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #0f0;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.mini-game-title {
+    font-size: 24px;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-shadow: 0 0 5px #0f0;
+}
+
+.mini-game-timer {
+    font-size: 20px;
+    color: #f00;
+}
+
+.mini-game-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background-color: #000;
+}
+
+.mini-game-footer {
+    margin-top: 15px;
+    text-align: center;
+    font-size: 14px;
+    color: #888;
+}
+
+/* Close Button */
+.mini-game-close {
+    position: absolute;
+    bottom: 15px;
+    right: 20px;
+    background: none;
+    border: 1px solid #f00;
+    color: #f00;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-family: inherit;
+    z-index: 2001;
+}
+
+.mini-game-close:hover {
+    background-color: #f00;
+    color: #000;
+}
+
+/* Intro Screen */
+.intro-screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    background-color: #001100;
+    text-align: center;
+}
+
+.intro-screen h2 {
+    color: #0f0;
+    font-size: 24px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #0f0;
+    padding-bottom: 10px;
+}
+
+.intro-content {
+    margin-bottom: 30px;
+    text-align: left;
+    max-width: 600px;
+}
+
+.intro-content p {
+    margin-bottom: 10px;
+    color: #ccc;
+}
+
+.intro-content strong {
+    color: #0f0;
+}
+
+.intro-content ul {
+    margin-left: 20px;
+    margin-bottom: 15px;
+    list-style-type: square;
+    color: #888;
+}
+
+.intro-content li {
+    margin-bottom: 5px;
+}
+
+.btn-start {
+    background-color: #004400;
+    color: #0f0;
+    border: 2px solid #0f0;
+    padding: 10px 30px;
+    font-size: 18px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s;
+    margin-bottom: 30px;
+}
+
+.btn-start:hover {
+    background-color: #0f0;
+    color: #000;
+    box-shadow: 0 0 15px #0f0;
+}
+
+/* Network Traffic Analysis Game Styles */
+.network-analysis-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    background-color: #001100;
+}
+
+.network-graph {
+    flex: 2;
+    position: relative;
+    border-right: 1px solid #0f0;
+    background-image:
+        linear-gradient(rgba(0, 255, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 0, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.packet-inspector {
+    flex: 1;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    background-color: #000;
+}
+
+.inspector-header {
+    font-size: 18px;
+    font-weight: bold;
+    border-bottom: 1px solid #0f0;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.current-node-display {
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: #888;
+}
+
+.current-node-display span {
+    color: #0f0;
+    font-weight: bold;
+}
+
+.traffic-table-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.traffic-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.traffic-table th {
+    text-align: left;
+    border-bottom: 1px solid #004400;
+    padding: 5px;
+    color: #00aa00;
+}
+
+.traffic-table td {
+    padding: 5px;
+    border-bottom: 1px solid #002200;
+}
+
+.traffic-table td.suspicious {
+    color: #ffaa00;
+    /* Subtle hint color, maybe remove for harder difficulty */
+}
+
+.btn-trace {
+    background: #002200;
+    border: 1px solid #0f0;
+    color: #0f0;
+    cursor: pointer;
+    font-size: 10px;
+    padding: 2px 5px;
+}
+
+.btn-trace:hover {
+    background: #0f0;
+    color: #000;
+}
+
+.inspector-hint {
+    margin-top: auto;
+    padding: 10px;
+    border: 1px solid #004400;
+    font-size: 11px;
+    color: #00aa00;
+    background: #001100;
+}
+
+/* Graph Elements */
+.net-node {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background-color: #002200;
+    border: 2px solid #004400;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 10px;
+    color: #004400;
+    z-index: 10;
+    transition: all 0.3s;
+}
+
+.net-node.discovered {
+    border-color: #0f0;
+    color: #0f0;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.net-node.active {
+    background-color: #004400;
+    box-shadow: 0 0 20px #0f0;
+    border-color: #fff;
+    color: #fff;
+}
+
+.net-node.source {
+    border-radius: 0;
+}
+
+/* Square for localhost */
+.net-node.target {
+    border-color: #f00;
+}
+
+/* Red for C2 if discovered */
+
+.net-label {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #00aa00;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.net-link {
+    position: absolute;
+    height: 2px;
+    background-color: #002200;
+    transform-origin: 0 50%;
+    z-index: 5;
+    transition: all 0.5s;
+}
+
+.net-link.traced {
+    background-color: #0f0;
+    box-shadow: 0 0 5px #0f0;
+}
+
+/* Alert Animation */
+.packet-inspector.alert {
+    animation: flash-red 0.5s;
+}
+
+@keyframes flash-red {
+    0% {
+        background-color: #000;
+    }
+
+    50% {
+        background-color: #330000;
+    }
+
+    100% {
+        background-color: #000;
+    }
+}
+
+.success-message {
+    text-align: center;
+    padding: 20px;
+    color: #0f0;
+}
+
+.ip-display {
+    font-size: 24px;
+    font-weight: bold;
+    border: 2px solid #0f0;
+    padding: 10px;
+    margin: 20px 0;
+    background: #001100;
+    letter-spacing: 2px;
+}
+
+/* Hex Dump Analyzer Styles */
+.hex-game-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    background-color: #001100;
+    font-family: 'Courier New', monospace;
+}
+
+.hex-sidebar {
+    width: 250px;
+    background-color: #000;
+    border-right: 1px solid #0f0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.target-panel {
+    margin-bottom: 30px;
+    border: 1px solid #004400;
+    padding: 15px;
+    background: #001100;
+}
+
+.target-panel h3 {
+    font-size: 14px;
+    color: #00aa00;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #004400;
+}
+
+.sig-display {
+    font-size: 18px;
+    color: #f00;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.status-panel {
+    margin-top: auto;
+    font-size: 12px;
+    color: #00aa00;
+}
+
+.status-panel p {
+    margin-bottom: 5px;
+}
+
+.blink {
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.hex-view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background-color: #000;
+    color: #00aa00;
+    font-size: 14px;
+}
+
+.hex-row {
+    display: flex;
+    margin-bottom: 5px;
+}
+
+.hex-offset {
+    color: #006600;
+    margin-right: 20px;
+    user-select: none;
+}
+
+.hex-bytes {
+    display: flex;
+    margin-right: 20px;
+}
+
+.hex-byte {
+    margin-right: 8px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.hex-byte:hover {
+    color: #fff;
+    background-color: #004400;
+}
+
+.hex-byte.found {
+    background-color: #f00;
+    color: #fff;
+    box-shadow: 0 0 10px #f00;
+}
+
+.hex-byte.error {
+    color: #f00;
+}
+
+.hex-ascii {
+    color: #004400;
+    letter-spacing: 2px;
+    user-select: none;
+    display: flex;
+}
+
+.hex-ascii-char {
+    width: 10px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.hex-ascii-char.hover {
+    background-color: #004400;
+    color: #fff;
+}
+
+.hex-ascii-char.found {
+    background-color: #f00;
+    color: #fff;
+    box-shadow: 0 0 5px #f00;
+}

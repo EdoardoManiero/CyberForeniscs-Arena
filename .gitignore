@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Old/backup files
+client/src/scene_less\ old.js
+client/src/scene_olds.js
+client/src/TutorialManager\ hardCodeObjTut.js
+client/src/TutorialManager_old.js
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+
+TODO.md
+DEPLOY.md

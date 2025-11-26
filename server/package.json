@@ -1,0 +1,36 @@
+{
+  "name": "cyberforensics-arena-server",
+  "version": "1.0.0",
+  "description": "Backend server for CyberForensics Arena - secure task validation and VFS",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "init-db": "node src/db/init.js",
+    "reset-users": "node src/scripts/resetUsers.js"
+  },
+  "keywords": [
+    "forensics",
+    "education",
+    "cybersecurity"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "compression": "^1.8.1",
+    "connect-sqlite3": "^0.9.16",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.2",
+    "express-session": "^1.18.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  }
+}
