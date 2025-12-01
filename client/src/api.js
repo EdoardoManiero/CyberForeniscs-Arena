@@ -164,6 +164,12 @@ export const tasksAPI = {
     return apiRequest(`/tasks/${taskId}/hint`, {
       method: 'GET'
     });
+  },
+
+  async getUnlockedHints() {
+    return apiRequest('/tasks/unlocked', {
+      method: 'GET'
+    });
   }
 };
 
