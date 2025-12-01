@@ -3,13 +3,35 @@
     "id": "file_system_forensic",
     "title": "File System Forensic",
     "description": "Analyze storage devices and find the evidence",
-    "introduction": "A suspicious hard disk has been seized. You must mount it, examine the file system, and find the hidden evidence. Use Linux commands to discover what happened.",
+    "introduction": "A suspicious hard disk has been seized. You must follow proper forensic procedures: hash the original evidence, create a forensic copy, verify integrity, then examine the file system to find hidden evidence.",
     "badge": "File System Forensic Expert",
     "interactableObjects": [
       "HD1-01_HD-1_0",
       "LinuxComputer"
     ],
-    "customCommands": [],
+    "customCommands": [
+      {
+        "name": "sha256sum",
+        "description": "Compute SHA256 hash of a file or device",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/dev/sdb": "SHA256(/dev/sdb) = 3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1a\nHash computed successfully. Record this value for chain of custody.",
+          "/forensic/evidence.img": "SHA256(/forensic/evidence.img) = 3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1a\n[✓] Hash MATCHES original evidence - Integrity verified!"
+        },
+        "output": "Usage: sha256sum <file or device>\nComputes cryptographic hash for forensic integrity verification."
+      },
+      {
+        "name": "dd",
+        "description": "Create bit-by-bit forensic copy of a device",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "if=/dev/sdb of=/forensic/evidence.img": "Creating forensic image...\n  Source: /dev/sdb (500MB)\n  Destination: /forensic/evidence.img\n  Block size: 4096 bytes\n\n122880+0 records in\n122880+0 records out\n503316480 bytes (500 MB) copied, 2.34 s, 215 MB/s\n\n[✓] Forensic image created successfully at /forensic/evidence.img"
+        },
+        "output": "Usage: dd if=<source> of=<destination>\nCreates bit-by-bit copy for forensic analysis."
+      }
+    ],
     "tasks": [
       {
         "id": "fs_task_1",
@@ -30,6 +52,7 @@
           }
         },
         "hintCost": 2,
+        "hasHint": false,
         "checkCommand": null,
         "checkArgs": null
       },
@@ -42,40 +65,84 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 3,
+        "hasHint": false,
         "checkCommand": "lsblk",
         "checkArgs": []
       },
       {
         "id": "fs_task_3",
-        "title": "Mount the device",
-        "details": "Use 'mount /dev/sdb1 /mnt/evidence' to mount the partition",
+        "title": "Calculate SHA256 hash of the original evidence",
+        "details": "Before any analysis, compute a cryptographic hash of the original disk to establish integrity. Use 'sha256sum /dev/sdb'",
         "points": 20,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
-        "checkCommand": "mount",
-        "checkArgs": [
-          "/dev/sdb1",
-          "/mnt/evidence"
-        ]
+        "hasHint": true,
+        "hint": "Hash the original device with: sha256sum /dev/sdb",
+        "checkCommand": "sha256sum",
+        "checkArgs": ["/dev/sdb"]
       },
       {
         "id": "fs_task_4",
+        "title": "Create a forensic copy using dd",
+        "details": "Never work on original evidence! Create a bit-by-bit forensic image. Use 'dd if=/dev/sdb of=/forensic/evidence.img'",
+        "points": 25,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 5,
+        "hasHint": true,
+        "hint": "Create forensic copy: dd if=/dev/sdb of=/forensic/evidence.img",
+        "checkCommand": "dd",
+        "checkArgs": ["if=/dev/sdb", "of=/forensic/evidence.img"]
+      },
+      {
+        "id": "fs_task_5",
+        "title": "Verify forensic copy integrity",
+        "details": "Hash the forensic image and compare with the original hash. They must match! Use 'sha256sum /forensic/evidence.img'",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Verify copy integrity: sha256sum /forensic/evidence.img",
+        "checkCommand": "sha256sum",
+        "checkArgs": ["/forensic/evidence.img"]
+      },
+      {
+        "id": "fs_task_6",
+        "title": "Mount the forensic copy read-only",
+        "details": "Mount the forensic image (not original!) in read-only mode to prevent accidental modification. Use 'mount -o ro /forensic/evidence.img /mnt/evidence'",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Mount read-only: mount -o ro /forensic/evidence.img /mnt/evidence",
+        "checkCommand": "mount",
+        "checkArgs": ["-o", "ro", "/forensic/evidence.img", "/mnt/evidence"]
+      },
+      {
+        "id": "fs_task_7",
         "title": "Explore the contents",
-        "details": "Use 'ls /mnt/evidence' to see files on the disk",
+        "details": "Use 'ls' to see files on the disk",
         "points": 15,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 3,
+        "hasHint": true,
         "checkCommand": "ls",
         "checkArgs": [
           "/mnt/evidence"
-        ]
+        ],
+        "hint": "use 'ls /mnt/evidence/'"
       },
       {
-        "id": "fs_task_5",
+        "id": "fs_task_8",
         "title": "Search for suspicious files",
         "details": "Use 'cat /mnt/evidence/suspicious.log' to read the log",
         "points": 20,
@@ -83,13 +150,14 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
+        "hasHint": false,
         "checkCommand": "cat",
         "checkArgs": [
           "/mnt/evidence/suspicious.log"
         ]
       },
       {
-        "id": "fs_task_6",
+        "id": "fs_task_9",
         "title": "Search for password in the log",
         "details": "Use 'grep password /mnt/evidence/suspicious.log'",
         "points": 25,
@@ -97,6 +165,7 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 5,
+        "hasHint": false,
         "checkCommand": "grep",
         "checkArgs": [
           "password",
@@ -109,7 +178,7 @@
     "id": "network_forensic",
     "title": "Network Forensic",
     "description": "Analyze network traffic and system logs",
-    "introduction": "A server has been compromised. You need to analyze authentication logs and network traffic to identify the attacker. First, you must trace the signal to locate the server.",
+    "introduction": "A server has been compromised. You need to analyze authentication logs and network traffic to identify the attacker. First, you must trace the signal to locate the server, then follow forensic best practices before analysis.",
     "badge": "Network Forensic Expert",
     "interactableObjects": [
       "Server",
@@ -130,6 +199,26 @@
         "description": "Network exploration tool and security / port scanner",
         "type": "command",
         "output": "Scanning 10.0.0.5...\nPORT    STATE SERVICE\n22/tcp  open  ssh\n80/tcp  open  http\n443/tcp open  https\n\nVulnerability detected on port 22 (SSH-2.0-OpenSSH_7.6p1)."
+      },
+      {
+        "name": "sha256sum",
+        "description": "Compute SHA256 hash of files for integrity verification",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/var/log/network/*": "SHA256(/var/log/network/auth.log) = 8f14e45fceea167a5a36dedd4bea2543e4c4e5a6b7c8d9e0f1a2b3c4d5e6f7a8\nSHA256(/var/log/network/network.pcap) = 2c624232cdd221771294dfbb310aca000a0df6ac8b66b696d90ef06fdefb64a3\nSHA256(/var/log/network/firewall.log) = 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\n\n[✓] Hashes recorded for chain of custody documentation."
+        },
+        "output": "Usage: sha256sum <file(s)>\nComputes cryptographic hash for forensic integrity verification."
+      },
+      {
+        "name": "cp",
+        "description": "Copy files or directories",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "-r /var/log/network /forensic/logs": "Creating forensic working copies...\n  '/var/log/network/auth.log' -> '/forensic/logs/auth.log'\n  '/var/log/network/network.pcap' -> '/forensic/logs/network.pcap'\n  '/var/log/network/firewall.log' -> '/forensic/logs/firewall.log'\n\n[✓] Working copies created in /forensic/logs/\n[!] Original evidence preserved - analysis will use copies."
+        },
+        "output": "Usage: cp [-r] <source> <destination>\nCopies files/directories for forensic analysis."
       }
     ],
     "tasks": [
@@ -142,6 +231,7 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 2,
+        "hasHint": false,
         "checkCommand": "trace-connection",
         "checkArgs": []
       },
@@ -154,6 +244,7 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 2,
+        "hasHint": false,
         "checkCommand": "nmap",
         "checkArgs": [
           "10.0.0.5"
@@ -179,25 +270,55 @@
           }
         },
         "hintCost": 2,
+        "hasHint": false,
         "checkCommand": null,
         "checkArgs": null
       },
       {
         "id": "net_task_3",
+        "title": "Hash network capture files before analysis",
+        "details": "Before analyzing evidence, compute hashes of all log files for integrity documentation. Use 'sha256sum /var/log/network/*'",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Hash all log files: sha256sum /var/log/network/*",
+        "checkCommand": "sha256sum",
+        "checkArgs": ["/var/log/network/*"]
+      },
+      {
+        "id": "net_task_4",
+        "title": "Create working copies of log files",
+        "details": "Create copies of evidence files for analysis, preserving originals. Use 'cp -r /var/log/network /forensic/logs'",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Copy logs: cp -r /var/log/network /forensic/logs",
+        "checkCommand": "cp",
+        "checkArgs": ["-r", "/var/log/network", "/forensic/logs"]
+      },
+      {
+        "id": "net_task_5",
         "title": "List system logs",
-        "details": "The remote server automatically mounts logs in /var/log/network. Use ls to explore his content.",
+        "details": "Now work with the forensic copies in /forensic/logs. Use ls to explore the content.",
         "points": 15,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 3,
+        "hasHint": false,
         "checkCommand": "ls",
         "checkArgs": [
           "/var/log/network"
         ]
       },
       {
-        "id": "net_task_4",
+        "id": "net_task_6",
         "title": "Read authentication logs",
         "details": "Use 'cat /var/log/network/auth.log'",
         "points": 20,
@@ -205,13 +326,14 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
+        "hasHint": false,
         "checkCommand": "cat",
         "checkArgs": [
           "/var/log/network/auth.log"
         ]
       },
       {
-        "id": "net_task_5",
+        "id": "net_task_7",
         "title": "Search for failed SSH attempts",
         "details": "Use 'grep \"Failed password\" /var/log/network/auth.log'",
         "points": 20,
@@ -219,6 +341,7 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
+        "hasHint": false,
         "checkCommand": "grep",
         "checkArgs": [
           "Failed password",
@@ -226,7 +349,7 @@
         ]
       },
       {
-        "id": "net_task_6",
+        "id": "net_task_8",
         "title": "Analyze packet capture",
         "details": "Use 'tcpdump' to see captured traffic statistics",
         "points": 25,
@@ -234,6 +357,7 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 5,
+        "hasHint": false,
         "checkCommand": "tcpdump",
         "checkArgs": []
       }
@@ -243,13 +367,33 @@
     "id": "memory_forensic",
     "title": "Memory Forensic",
     "description": "Analyze RAM memory dump to find artifacts",
-    "introduction": "A RAM memory dump contains traces of malware. Analyze it using forensic tools to discover what malicious processes were running.",
+    "introduction": "A RAM memory dump contains traces of malware. Before analysis, you must verify the dump's integrity and create a working copy. Then analyze it using forensic tools to discover what malicious processes were running.",
     "badge": "Memory Forensic Expert",
     "interactableObjects": [
       "HD2-01_HD-2_0",
       "LinuxComputer"
     ],
     "customCommands": [
+      {
+        "name": "sha256sum",
+        "description": "Compute SHA256 hash of a file or device",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/dev/sdc": "SHA256(/dev/sdc) = e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n\n[✓] Hash computed successfully.\n[!] Record this value - it proves the memory dump has not been modified."
+        },
+        "output": "Usage: sha256sum <file or device>\nComputes cryptographic hash for forensic integrity verification."
+      },
+      {
+        "name": "dd",
+        "description": "Create bit-by-bit forensic copy of a device",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "if=/dev/sdc of=/forensic/memdump.img": "Creating forensic copy of memory dump...\n  Source: /dev/sdc (8GB memory image)\n  Destination: /forensic/memdump.img\n  Block size: 4096 bytes\n\n2097152+0 records in\n2097152+0 records out\n8589934592 bytes (8.6 GB) copied, 45.2 s, 190 MB/s\n\n[✓] Memory dump copy created at /forensic/memdump.img\n[!] Original evidence on /dev/sdc preserved."
+        },
+        "output": "Usage: dd if=<source> of=<destination>\nCreates bit-by-bit copy for forensic analysis."
+      },
       {
         "name": "memdump-info",
         "description": "Display memory dump metadata and statistics",
@@ -284,6 +428,7 @@
           }
         },
         "hintCost": 2,
+        "hasHint": false,
         "checkCommand": null,
         "checkArgs": null
       },
@@ -296,11 +441,40 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 3,
+        "hasHint": false,
         "checkCommand": "lsblk",
         "checkArgs": []
       },
       {
         "id": "mem_task_3",
+        "title": "Verify dump integrity (hash check)",
+        "details": "Compute the SHA256 hash of the memory dump device to verify integrity. Use 'sha256sum /dev/sdc'",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Hash the device: sha256sum /dev/sdc",
+        "checkCommand": "sha256sum",
+        "checkArgs": ["/dev/sdc"]
+      },
+      {
+        "id": "mem_task_4",
+        "title": "Create working copy of memory image",
+        "details": "Create a forensic copy of the memory dump for analysis. Use 'dd if=/dev/sdc of=/forensic/memdump.img'",
+        "points": 25,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 5,
+        "hasHint": true,
+        "hint": "Create copy: dd if=/dev/sdc of=/forensic/memdump.img",
+        "checkCommand": "dd",
+        "checkArgs": ["if=/dev/sdc", "of=/forensic/memdump.img"]
+      },
+      {
+        "id": "mem_task_5",
         "title": "Mount the device",
         "details": "Use 'mount /dev/sdc1 /mnt/memdump'",
         "points": 20,
@@ -308,6 +482,7 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
+        "hasHint": false,
         "checkCommand": "mount",
         "checkArgs": [
           "/dev/sdc1",
@@ -315,7 +490,7 @@
         ]
       },
       {
-        "id": "mem_task_4",
+        "id": "mem_task_6",
         "title": "List dump files",
         "details": "Use 'ls /mnt/memdump'",
         "points": 15,
@@ -323,13 +498,14 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 3,
+        "hasHint": false,
         "checkCommand": "ls",
         "checkArgs": [
           "/mnt/memdump"
         ]
       },
       {
-        "id": "mem_task_5",
+        "id": "mem_task_7",
         "title": "Analyze processes",
         "details": "Use 'cat /mnt/memdump/process_list.txt'",
         "points": 20,
@@ -337,13 +513,14 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
+        "hasHint": false,
         "checkCommand": "cat",
         "checkArgs": [
           "/mnt/memdump/process_list.txt"
         ]
       },
       {
-        "id": "mem_task_6",
+        "id": "mem_task_8",
         "title": "Get memory dump metadata",
         "details": "Use 'memdump-info' to display memory dump analysis and statistics",
         "points": 20,
@@ -351,11 +528,12 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
+        "hasHint": false,
         "checkCommand": "memdump-info",
         "checkArgs": []
       },
       {
-        "id": "mem_task_7",
+        "id": "mem_task_9",
         "title": "Scan for malicious signatures",
         "details": "Use 'find-malware' to identify suspicious processes and malware in memory",
         "points": 25,
@@ -363,6 +541,7 @@
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 5,
+        "hasHint": false,
         "checkCommand": "find-malware",
         "checkArgs": []
       }
