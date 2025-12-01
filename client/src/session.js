@@ -16,7 +16,9 @@ const sessionState = {
   user: null,
   isAuthenticated: false,
   isLoading: true,
-  listeners: new Set()
+  listeners: new Set(),
+  initPromise: null,  // Guards against concurrent init calls
+  initialized: false  // Tracks if init has completed at least once
 };
 
 // ============================================================================
@@ -25,26 +27,48 @@ const sessionState = {
 
 /**
  * Initialize session - check if user is already logged in
+ * 
+ * This function is idempotent: calling it multiple times will return
+ * the same promise if initialization is in progress, preventing race conditions.
  */
 export async function initSession() {
-  try {
-    sessionState.isLoading = true;
-    const user = await authAPI.getMe();
-    if (user) {
-      sessionState.user = user;
-      sessionState.isAuthenticated = true;
-      notifyListeners();
-      return true;
-    }
-  } catch (error) {
-    // Not authenticated or session expired
-    sessionState.user = null;
-    sessionState.isAuthenticated = false;
-  } finally {
-    sessionState.isLoading = false;
-    notifyListeners();
+  // If already initialized, return immediately
+  if (sessionState.initialized) {
+    return sessionState.isAuthenticated;
   }
-  return false;
+  
+  // If initialization is in progress, return the existing promise
+  // This prevents race conditions when multiple modules call initSession()
+  if (sessionState.initPromise) {
+    return sessionState.initPromise;
+  }
+  
+  // Create the initialization promise
+  sessionState.initPromise = (async () => {
+    try {
+      sessionState.isLoading = true;
+      notifyListeners(); // Notify that loading started
+      
+      const user = await authAPI.getMe();
+      if (user) {
+        sessionState.user = user;
+        sessionState.isAuthenticated = true;
+        return true;
+      }
+      return false;
+    } catch (error) {
+      // Not authenticated or session expired
+      sessionState.user = null;
+      sessionState.isAuthenticated = false;
+      return false;
+    } finally {
+      sessionState.isLoading = false;
+      sessionState.initialized = true;
+      notifyListeners();
+    }
+  })();
+  
+  return sessionState.initPromise;
 }
 
 /**
@@ -115,6 +139,8 @@ export async function logout() {
     // Clear session state
     sessionState.user = null;
     sessionState.isAuthenticated = false;
+    sessionState.initPromise = null;  // Reset so next login can re-initialize
+    sessionState.initialized = false;
 
     // Clear sessionStorage items
     try {
@@ -198,5 +224,6 @@ function notifyListeners() {
   });
 }
 
-// Auto-initialize session on module load
-initSession();
+// NOTE: Session initialization is now handled explicitly in main.js
+// This prevents race conditions when multiple modules import session.js
+// The initSession() function is idempotent and safe to call multiple times
