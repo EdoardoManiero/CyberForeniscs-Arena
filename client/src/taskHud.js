@@ -51,6 +51,7 @@ const hudState = {
   isCollapsed: false,
   listenersSetup: false,
   hintShown: new Set(), // Track which tasks have shown hints
+  unlockedHints: new Set(), // Track which tasks have unlocked hints (persistent)
   toastShown: new Set() // Track which tasks have shown completion toasts
 };
 
@@ -218,17 +219,23 @@ function buildTaskItem(task, index, currentIndex) {
     statusClass = 'pending';
   }
 
-  // Build hint button and hint display for active tasks
+  // Build hint button and hint display for active tasks OR unlocked tasks
   // Show hint button if task has hintCost (indicates hint is available)
   let hintSection = '';
-  if (isActive && task.hintCost !== undefined && task.hintCost !== null) {
+  const isUnlocked = hudState.unlockedHints.has(taskId);
+
+  if ((isActive || isUnlocked) && task.hasHint && task.hintCost !== undefined && task.hintCost !== null) {
     const hintCost = task.hintCost || 0;
+    const buttonText = isUnlocked ? 'Show Hint (Unlocked)' : `Hint (${hintCost} pts)`;
+    const buttonTitle = isUnlocked ? 'Show hint (already unlocked)' : `Get hint (costs ${hintCost} points)`;
+    const buttonClass = isUnlocked ? 'task-hint-btn unlocked' : 'task-hint-btn';
+
     hintSection = `
       <div class="task-hint-section">
         ${!hintShown ? `
-          <button class="task-hint-btn" data-task-id="${taskId}" data-hint-cost="${hintCost}" title="Get hint (costs ${hintCost} points)">
+          <button class="${buttonClass}" data-task-id="${taskId}" data-hint-cost="${isUnlocked ? 0 : hintCost}" title="${buttonTitle}">
             <i class="fas fa-lightbulb"></i>
-            <span>Hint (${hintCost} pts)</span>
+            <span>${buttonText}</span>
           </button>
         ` : ''}
         ${hintShown && hintText ? `
@@ -254,7 +261,7 @@ function buildTaskItem(task, index, currentIndex) {
 
   // Add event listener for hint button
   // Show hint button if task has hintCost (indicates hint is available)
-  if (isActive && task.hintCost !== undefined && task.hintCost !== null) {
+  if ((isActive || isUnlocked) && task.hintCost !== undefined && task.hintCost !== null) {
     const hintBtn = item.querySelector('.task-hint-btn');
     if (hintBtn) {
       hintBtn.addEventListener('click', async (e) => {
@@ -284,10 +291,11 @@ async function handleHintClick(task, taskId) {
     return; // Hint already shown
   }
 
-  const hintCost = task.hintCost || 0;
+  const isUnlocked = hudState.unlockedHints.has(taskId);
+  const hintCost = isUnlocked ? 0 : (task.hintCost || 0);
   const currentPoints = PointsBadge.getPoints();
 
-  if (currentPoints < hintCost) {
+  if (!isUnlocked && currentPoints < hintCost) {
     showToast('Insufficient Points', `You need ${hintCost} points to view this hint. You currently have ${currentPoints} points.`);
     return;
   }
@@ -300,23 +308,28 @@ async function handleHintClick(task, taskId) {
       // Store the fetched hint
       fetchedHints.set(taskId, result.hint);
 
-      // Deduct points
-      const success = PointsBadge.subtractPoints(hintCost);
-      if (!success) {
-        showToast('Error', 'Failed to deduct points. Please try again.');
-        return;
+      // Deduct points only if not already unlocked
+      if (!isUnlocked && !result.alreadyUnlocked) {
+        const success = PointsBadge.subtractPoints(hintCost);
+        if (!success) {
+          showToast('Error', 'Failed to deduct points. Please try again.');
+          return;
+        }
+        showToast('Hint Revealed', `-${hintCost} points. Check the task for the hint.`);
+      } else {
+        showToast('Hint Revealed', 'Hint is unlocked.');
       }
 
-      // Mark hint as shown
+      // Mark hint as shown and unlocked
       hudState.hintShown.add(taskId);
+      hudState.unlockedHints.add(taskId);
 
       // Update the display to show the hint
       updateDisplay();
-
-      showToast('Hint Revealed', `-${hintCost} points. Check the task for the hint.`);
     } else {
       showToast('Error', 'Failed to fetch hint from server.');
     }
+
   } catch (error) {
     console.error('[TaskHud] Error fetching hint:', error);
     if (error.message && error.message.includes('Insufficient points')) {
@@ -387,7 +400,7 @@ function showToast(title, message, type = 'task', badge = null, pointsAwarded = 
     // Modern, clean design for scenario completion
     toastContent = `
       <div class="toast-header">
-        <div class="toast-icon">   </div>
+        <div class="toast-icon"><i class="fas fa-flag-checkered"></i></div>
         <div class="toast-title-group">
           <div class="toast-main-title">Scenario Complete</div>
           <div class="toast-subtitle">${escapeHtml(message || '')}</div>
@@ -398,7 +411,7 @@ function showToast(title, message, type = 'task', badge = null, pointsAwarded = 
       </div>
       ${badge ? `
         <div class="toast-badge">
-          <span class="badge-icon">    </span>
+          <span class="badge-icon"><i class="fas fa-trophy"></i></span>
           <span class="badge-text">${escapeHtml(badge)}</span>
           ${pointsAwarded > 0 ? `<span class="badge-points">+${pointsAwarded} points</span>` : ''}
         </div>
@@ -408,7 +421,7 @@ function showToast(title, message, type = 'task', badge = null, pointsAwarded = 
     // Badge toast design (for skill badges like Hint-Free Expert, Speed Runner)
     toastContent = `
       <div class="toast-header">
-        <div class="toast-icon">    </div>
+        <div class="toast-icon"><i class="fas fa-medal"></i></div>
         <div class="toast-title-group">
           <div class="toast-main-title">Badge Unlocked</div>
           <div class="toast-subtitle">${escapeHtml(badge || title || '')}</div>
@@ -419,7 +432,7 @@ function showToast(title, message, type = 'task', badge = null, pointsAwarded = 
       </div>
       ${pointsAwarded > 0 ? `
         <div class="toast-badge">
-          <span class="badge-icon">   </span>
+          <span class="badge-icon"><i class="fas fa-star"></i></span>
           <span class="badge-text">Points Awarded</span>
           <span class="badge-points">+${pointsAwarded} points</span>
         </div>
@@ -493,6 +506,38 @@ export const TaskHud = {
     }
 
     adjustHUDForMobile();
+
+    // Fetch unlocked hints
+    this._fetchUnlockedHints();
+  },
+
+  async _fetchUnlockedHints() {
+    try {
+      const result = await tasksAPI.getUnlockedHints();
+      if (result && result.unlocked) {
+        // First mark all as unlocked
+        result.unlocked.forEach(taskId => hudState.unlockedHints.add(taskId));
+
+        // Then fetch the text for each one
+        // We do this in parallel but update display as they come in or once at the end
+        const fetchPromises = result.unlocked.map(async (taskId) => {
+          try {
+            const hintResult = await tasksAPI.getHint(taskId);
+            if (hintResult && hintResult.hint) {
+              fetchedHints.set(taskId, hintResult.hint);
+              hudState.hintShown.add(taskId);
+            }
+          } catch (err) {
+            console.error(`Failed to fetch hint text for ${taskId}`, err);
+          }
+        });
+
+        await Promise.all(fetchPromises);
+        updateDisplay();
+      }
+    } catch (error) {
+      console.error('Failed to fetch unlocked hints:', error);
+    }
   },
 
   _setupEventListeners() {
