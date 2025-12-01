@@ -44,7 +44,8 @@ const appState = {
   scene: null,
   canvas: null,
   tutorial: null,
-  isInitialized: false
+  isInitialized: false,
+  isInitializing: false  // Moved here for global access
 };
 
 // ============================================================================
@@ -60,6 +61,8 @@ const appState = {
  * Initializes the application on DOM content loaded
  */
 async function initializeApp() {
+  const loadingScreen = document.getElementById('appLoading');
+  
   try {
     console.log('[Main] Starting initialization...');
 
@@ -74,11 +77,16 @@ async function initializeApp() {
     canvas.style.display = 'block';
     canvas.style.visibility = 'visible';
 
-    // STEP 3: Initialize session
+    // STEP 3: Initialize session (idempotent - safe to call multiple times)
     await initSession();
     console.log('[Main] Session initialized');
 
-    // STEP 4: Check authentication
+    // STEP 4: Hide loading screen now that session is checked
+    if (loadingScreen) {
+      loadingScreen.classList.add('hidden');
+    }
+
+    // STEP 5: Check authentication
     if (!isAuthenticated()) {
       showLoginPage('login');
 
@@ -97,11 +105,21 @@ async function initializeApp() {
       });
     }
 
-    // STEP 5: Continue initialization after auth
-    await initCore();
+    // STEP 6: Continue initialization after auth
+    // Set flag BEFORE calling initCore to prevent AUTH_SUCCESS handler from also calling it
+    appState.isInitializing = true;
+    try {
+      await initCore();
+    } finally {
+      appState.isInitializing = false;
+    }
 
   } catch (error) {
     console.error('[Main] Initialization failed:', error);
+    // Hide loading screen even on error so user can see the error message
+    if (loadingScreen) {
+      loadingScreen.classList.add('hidden');
+    }
     showFatalError(error.message);
   }
 }
@@ -447,6 +465,7 @@ eventBus.on(Events.USER_LOGGED_OUT, () => {
 
   // Reset initialization state
   appState.isInitialized = false;
+  appState.isInitializing = false;
 
   // Show login page
   showLoginPage('login');
@@ -454,16 +473,17 @@ eventBus.on(Events.USER_LOGGED_OUT, () => {
 });
 
 // Listen for auth success to re-initialize scene after logout
-let isInitializing = false; // Prevent multiple simultaneous initializations
+// This handler is ONLY for re-initialization after logout, NOT for first login
+// First login is handled by initializeApp() which sets appState.isInitializing
 eventBus.on(Events.AUTH_SUCCESS, async () => {
   // Only re-initialize if we're not already initialized and not currently initializing
-  if (appState.isInitialized || isInitializing) {
-    console.log('[Main] Auth success, but already initialized or initializing, skipping...');
+  if (appState.isInitialized || appState.isInitializing) {
+    console.log('[Main] Auth success, but already initialized or initializing, skipping re-init...');
     return;
   }
 
-  isInitializing = true;
-  console.log('[Main] Auth success, re-initializing scene...');
+  appState.isInitializing = true;
+  console.log('[Main] Auth success after logout, re-initializing scene...');
 
   try {
     // Ensure navbar is visible
@@ -497,7 +517,7 @@ eventBus.on(Events.AUTH_SUCCESS, async () => {
   } catch (error) {
     console.error('[Main] Error during scene re-initialization:', error);
   } finally {
-    isInitializing = false;
+    appState.isInitializing = false;
   }
 });
 
