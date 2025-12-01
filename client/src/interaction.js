@@ -183,6 +183,14 @@ function isTypingInXterm() {
   return element?.classList?.contains(XTERM_TEXTAREA_CLASS) ?? false;
 }
 
+/**
+ * Checks if login page is active
+ */
+function isLoginPageActive() {
+  const loginPage = document.getElementById('loginPage');
+  return loginPage?.classList.contains('active') ?? false;
+}
+
 // ============================================================================
 // HIGHLIGHT MANAGEMENT
 // ============================================================================
@@ -297,7 +305,7 @@ export function setupInteractions(scene, camera) {
 
   // ========== POINTER MOVEMENT & HOVER ==========
   scene.onPointerObservable.add((pointerInfo) => {
-    if (isTutorialGateOpen()) return;
+    if (isTutorialGateOpen() || isLoginPageActive()) return;
 
     if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE) {
       updateHighlightFromPointer();
@@ -344,7 +352,7 @@ export function setupInteractions(scene, camera) {
 
   // E to interact with PC - emit event instead of calling toggleConsoleVisibility
   function handleEKey(event) {
-    if (isTutorialGateOpen()) return;
+    if (isTutorialGateOpen() || isLoginPageActive()) return;
     if ((event.key || '').toLowerCase() !== KEY_CODES.E) return;
     if (isConsoleOpen() && isTypingInXterm()) return;
 
@@ -368,7 +376,13 @@ export function setupInteractions(scene, camera) {
 
   // C to toggle console, ESC to close - emit events instead of calling toggleConsoleVisibility
   function handleConsoleLKeys(event) {
-    if (isTutorialGateOpen()) return;
+    if (isTutorialGateOpen() || isLoginPageActive()) return;
+
+    // Ignore if user is typing in an input field or textarea (e.g. login form)
+    // This fixes the bug where typing 'c' in login form opens console
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+      return;
+    }
 
     const key = (event.key || '').toLowerCase();
 
@@ -464,6 +478,9 @@ export function setupInteractions(scene, camera) {
       return;
     }
 
+    // Ignore if login page is active
+    if (isLoginPageActive()) return;
+
     // Ignore if console is open (double check via DOM class)
     const consoleContainer = document.getElementById(CONSOLE_CONTAINER_ID);
     if (consoleContainer && consoleContainer.classList.contains('console-open')) {
@@ -492,7 +509,7 @@ export function setupInteractions(scene, camera) {
   // Movement signal for tutorial
   let movementSignaled = false;
   function handleMovement(event) {
-    if (movementSignaled) return;
+    if (movementSignaled || isLoginPageActive()) return;
 
     const key = (event.key || '').toUpperCase();
     if ([KEY_CODES.W, KEY_CODES.A, KEY_CODES.S, KEY_CODES.D,
