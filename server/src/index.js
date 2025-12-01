@@ -7,6 +7,8 @@
  * - Console command execution
  * - Leaderboard
  * * Security: All client input is untrusted. Never expose solutions or accept scores from client.
+ * 
+ * See: theory/rate-limiting.md for rate limiting strategy explanation
  */
 
 import express from 'express';
@@ -16,6 +18,7 @@ import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import compression from 'compression';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import sqlite3 from 'connect-sqlite3';
 import passport from './config/passport.js';
 import { initDatabase } from './db/db.js';
@@ -80,18 +83,63 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Health check
+// ============================================================================
+// RATE LIMITING
+// ============================================================================
+// Protect API from abuse and accidental overload
+// Different limits for different endpoint types
+
+// General API limiter: 100 requests per minute
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/api/health' // Don't limit health checks
+});
+
+// Console commands: 5 per second (each command hits DB 2-3 times)
+const consoleLimiter = rateLimit({
+  windowMs: 1000,
+  max: 5,
+  message: { error: 'Too many commands, slow down' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Task submissions: 3 per second (prevents spam clicking)
+const taskSubmitLimiter = rateLimit({
+  windowMs: 1000,
+  max: 3,
+  message: { error: 'Too many submissions, please wait' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Auth endpoints: 10 per 15 minutes (prevents brute force)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Only limit login/register, not session checks
+  skip: (req) => req.path === '/me' || req.path === '/logout'
+});
+
+// Health check (no rate limit)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/console', consoleRoutes);
-app.use('/api/leaderboard', leaderboardRoutes);
-app.use('/api/scenarios', scenarioRoutes);
-app.use('/api/devices', deviceRoutes);
+// Apply rate limiters to routes
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/tasks', taskSubmitLimiter, taskRoutes);
+app.use('/api/console', consoleLimiter, consoleRoutes);
+app.use('/api/leaderboard', apiLimiter, leaderboardRoutes);
+app.use('/api/scenarios', apiLimiter, scenarioRoutes);
+app.use('/api/devices', apiLimiter, deviceRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -112,14 +160,14 @@ async function startServer() {
 
     // Start server
     app.listen(PORT, () => {
-      console.log(`     CyberForensics Arena Server running on port ${PORT}`);
-      console.log(`     CORS enabled for: ${CORS_ORIGIN}`);
-      console.log(`     Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`     Passport.js session authentication enabled`);
+      console.log(`CyberForensics Arena Server running on port ${PORT}`);
+      console.log(`CORS enabled for: ${CORS_ORIGIN}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`Passport.js session authentication enabled`);
     });
 
   } catch (error) {
-    console.error('    Failed to start server:', error);
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 }
