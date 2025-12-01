@@ -612,13 +612,13 @@ function listInteractableObjectsDebug(scene) {
 
   if (permanentHighlightedMeshes?.length) {
     console.log('\nCurrently highlighted:');
-    permanentHighlightedMeshes.forEach(m => console.log(`  - ${m.name}`));
+    permanentHighlightedMeshes.forEach(m => console.log(`- ${m.name}`));
   }
 
   const scenario = currentScenarioData;
   if (scenario?.interactableObjects) {
     console.log('\nScenario objects:');
-    scenario.interactableObjects.forEach(name => console.log(`  - ${name}`));
+    scenario.interactableObjects.forEach(name => console.log(`- ${name}`));
   }
 
   console.log('===========================\n');
