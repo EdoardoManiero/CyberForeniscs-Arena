@@ -314,7 +314,7 @@
         "hasHint": false,
         "checkCommand": "ls",
         "checkArgs": [
-          "/var/log/network"
+          "/forensic/logs"
         ]
       },
       {
