@@ -307,10 +307,96 @@ function executeCommand(cmd, args, vfs, cwd, scenarioCode) {
       }
       break;
 
+    case 'cp':
+      {
+        // Parse flags and arguments
+        const recursive = args.includes('-r') || args.includes('-R');
+        const filteredArgs = args.filter(a => a !== '-r' && a !== '-R');
+        
+        if (filteredArgs.length < 2) {
+          error = 'cp: missing file operand';
+        } else {
+          const srcPath = resolvePath(filteredArgs[0], cwd);
+          const destPath = resolvePath(filteredArgs[1], cwd);
+          const srcNode = getNode(vfs, srcPath);
+          
+          if (!srcNode) {
+            error = `cp: ${filteredArgs[0]}: No such file or directory`;
+          } else if (srcNode.type === 'dir' && !recursive) {
+            error = `cp: -r not specified; omitting directory '${filteredArgs[0]}'`;
+          } else {
+            // Deep clone function for copying nodes
+            const deepClone = (node) => {
+              if (node.type === 'file') {
+                return { type: 'file', content: node.content || '' };
+              }
+              const cloned = { type: 'dir', children: {} };
+              if (node.children) {
+                for (const [name, child] of Object.entries(node.children)) {
+                  cloned.children[name] = deepClone(child);
+                }
+              }
+              return cloned;
+            };
+            
+            // Create destination path if it doesn't exist
+            const destParts = destPath.split('/').filter(Boolean);
+            let destParent = vfs;
+            
+            // Create all parent directories for destination
+            for (let i = 0; i < destParts.length - 1; i++) {
+              if (!destParent.children) destParent.children = {};
+              if (!destParent.children[destParts[i]]) {
+                destParent.children[destParts[i]] = { type: 'dir', children: {} };
+              }
+              destParent = destParent.children[destParts[i]];
+            }
+            
+            const destName = destParts[destParts.length - 1];
+            const existingDest = getNode(vfs, destPath);
+            
+            // If destination exists and is a directory, copy into it
+            if (existingDest && existingDest.type === 'dir') {
+              const srcName = srcPath.split('/').filter(Boolean).pop();
+              if (!existingDest.children) existingDest.children = {};
+              existingDest.children[srcName] = deepClone(srcNode);
+            } else {
+              // Copy to destination path
+              if (!destParent.children) destParent.children = {};
+              destParent.children[destName] = deepClone(srcNode);
+            }
+            
+            vfsModified = true;
+            
+            // Generate output showing what was copied
+            const outputLines = [];
+            const listCopied = (node, srcBase, destBase) => {
+              if (node.type === 'file') {
+                outputLines.push(`  '${srcBase}' -> '${destBase}'`);
+              } else if (node.children) {
+                for (const [name, child] of Object.entries(node.children)) {
+                  listCopied(child, `${srcBase}/${name}`, `${destBase}/${name}`);
+                }
+              }
+            };
+            
+            if (srcNode.type === 'dir') {
+              output = `Creating forensic working copies...`;
+              listCopied(srcNode, srcPath, destPath);
+              output += '\n' + outputLines.join('\n');
+              output += `\n\n[✓] Working copies created in ${destPath}/\n[!] Original evidence preserved - analysis will use copies.`;
+            } else {
+              output = `'${srcPath}' -> '${destPath}'`;
+            }
+          }
+        }
+      }
+      break;
+
     case 'help':
       output = [
         'Available commands:',
-        '  ls [path]       - list directory',
+        '  ls [path]        - list directory',
         '  cd <path>        - change directory',
         '  pwd              - show current directory',
         '  cat <file>       - read file',
@@ -318,6 +404,7 @@ function executeCommand(cmd, args, vfs, cwd, scenarioCode) {
         '  echo <text>      - print text',
         '  mkdir <dir>      - create directory',
         '  touch <file>     - create empty file',
+        '  cp [-r] <src> <dest> - copy file or directory',
         '  rm <file/dir>    - remove file or directory',
         '  clear            - clear screen',
         '  help             - show this help'
