@@ -75,6 +75,9 @@ router.post('/register', async (req, res) => {
         return res.status(500).json({ error: 'Registration successful but login failed' });
       }
 
+      // Log login time to console only
+      console.log(`User ${email} (ID: ${newUserId}) logged in (after registration) at ${new Date().toISOString()}`);
+
       res.status(201).json({
         success: true,
         user: {
@@ -114,6 +117,9 @@ router.post('/login', (req, res, next) => {
         console.error('Session creation error:', loginErr);
         return res.status(500).json({ error: 'Login failed' });
       }
+
+      // Log login time to console only
+      console.log(`User ${user.email} (ID: ${user.id}) logged in at ${new Date().toISOString()}`);
 
       // Return user data
       res.json({
