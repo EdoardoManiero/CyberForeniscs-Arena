@@ -416,6 +416,12 @@ export class SignalTracingGame {
     win() {
         this.isActive = false;
         clearInterval(this.timerInterval);
+
+        // Lock result immediately to prevent abort during animation
+        if (this.callbacks && this.callbacks.lockResult) {
+            this.callbacks.lockResult();
+        }
+
         const inspector = this.container.querySelector('.packet-inspector');
         inspector.innerHTML = `
             <div class="success-message">
@@ -432,6 +438,12 @@ export class SignalTracingGame {
     lose() {
         this.isActive = false;
         clearInterval(this.timerInterval);
+
+        // Lock result immediately to prevent abort during animation
+        if (this.callbacks && this.callbacks.lockResult) {
+            this.callbacks.lockResult();
+        }
+
         this.container.innerHTML = `
             <div class="success-message" style="color:#f00; border-color:#f00;">
                 <h2>CONNECTION LOST</h2>

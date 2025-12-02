@@ -288,6 +288,11 @@ export class DecryptionGame {
         this.isActive = false;
         clearInterval(this.timerInterval);
 
+        // Lock result immediately to prevent abort during animation
+        if (this.callbacks && this.callbacks.lockResult) {
+            this.callbacks.lockResult();
+        }
+
         // Highlight the sequence in both Hex and ASCII
         for (let i = 0; i < this.targetSignature.length; i++) {
             const idx = this.targetIndex + i;
@@ -323,6 +328,12 @@ export class DecryptionGame {
     lose() {
         this.isActive = false;
         clearInterval(this.timerInterval);
+
+        // Lock result immediately to prevent abort during animation
+        if (this.callbacks && this.callbacks.lockResult) {
+            this.callbacks.lockResult();
+        }
+
         this.container.innerHTML = '<div class="success-message" style="color:#f00; border-color:#f00;"><h2>SCAN FAILED</h2><p>Signature not found in time.</p></div>';
         setTimeout(() => {
             if (this.callbacks) this.callbacks.onFail();

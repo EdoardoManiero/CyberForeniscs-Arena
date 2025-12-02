@@ -9,6 +9,8 @@ export class MiniGameManager {
         this.container = null;
         this.currentGame = null;
         this.onComplete = null; // Callback when game finishes
+        this.isResultLocked = false; // Prevents abort from overriding win/lose
+        this.isFinished = false; // Prevents duplicate finishGame calls
 
         this.initOverlay();
     }
@@ -55,17 +57,30 @@ export class MiniGameManager {
     startGame(gameInstance, callback) {
         this.currentGame = gameInstance;
         this.onComplete = callback;
+        this.isResultLocked = false; // Reset lock state for new game
+        this.isFinished = false; // Reset finish state for new game
 
         // Clear previous content
         this.container.innerHTML = '';
+
+        // Re-enable abort button for new game
+        const closeBtn = this.overlay.querySelector('.mini-game-close');
+        if (closeBtn) {
+            closeBtn.disabled = false;
+            closeBtn.style.opacity = '1';
+            closeBtn.style.pointerEvents = 'auto';
+        }
 
         // Show overlay FIRST so dimensions are available
         this.overlay.classList.add('active');
 
         // Initialize game
+        // lockResult: Call this immediately when game outcome is determined (before animations)
+        // This prevents abort from overriding a completed game during success/fail animations
         this.currentGame.init(this.container, {
             onSuccess: () => this.finishGame(true),
-            onFail: () => this.finishGame(false)
+            onFail: () => this.finishGame(false),
+            lockResult: () => this.lockResult()
         });
 
         // Update title if game has one
@@ -76,6 +91,21 @@ export class MiniGameManager {
     }
 
     finishGame(success) {
+        // Prevent race condition: if game already finished (won/lost), ignore further calls
+        // This prevents abort from overriding a completed game during the success animation delay
+        if (this.isFinished) {
+            return;
+        }
+        this.isFinished = true;
+
+        // Disable abort button immediately to prevent accidental clicks
+        const closeBtn = this.overlay.querySelector('.mini-game-close');
+        if (closeBtn) {
+            closeBtn.disabled = true;
+            closeBtn.style.opacity = '0.5';
+            closeBtn.style.pointerEvents = 'none';
+        }
+
         this.overlay.classList.remove('active');
         this.container.innerHTML = '';
         this.currentGame = null;
@@ -86,7 +116,28 @@ export class MiniGameManager {
     }
 
     abortGame() {
+        // Only allow abort if game result hasn't been locked (win/lose determined)
+        if (this.isResultLocked) {
+            return;
+        }
         this.finishGame(false);
+    }
+
+    /**
+     * Lock the game result - prevents abort from overriding outcome
+     * Games should call this immediately when they determine win/lose,
+     * before starting their success/fail animations
+     */
+    lockResult() {
+        this.isResultLocked = true;
+
+        // Disable abort button immediately
+        const closeBtn = this.overlay.querySelector('.mini-game-close');
+        if (closeBtn) {
+            closeBtn.disabled = true;
+            closeBtn.style.opacity = '0.5';
+            closeBtn.style.pointerEvents = 'none';
+        }
     }
 }
 
