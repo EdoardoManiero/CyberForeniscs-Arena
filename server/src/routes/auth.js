@@ -52,10 +52,10 @@ router.post('/register', async (req, res) => {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Insert user
+    // Insert user - always with 'user' role (admin users are seeded in schema.js)
     const result = await db.run(`
-      INSERT INTO users (email, password_hash, display_name)
-      VALUES (?, ?, ?)
+      INSERT INTO users (email, password_hash, display_name, role)
+      VALUES (?, ?, ?, 'user')
     `, email, passwordHash, displayName);
 
     const newUserId = result.lastID;
@@ -65,6 +65,7 @@ router.post('/register', async (req, res) => {
       id: newUserId,
       email,
       displayName,
+      role: 'user',
       tutorialCompleted: false
     };
 
@@ -84,6 +85,7 @@ router.post('/register', async (req, res) => {
           id: newUserId,
           email,
           displayName,
+          role: 'user',
           tutorialCompleted: false
         }
       });
@@ -128,6 +130,7 @@ router.post('/login', (req, res, next) => {
           id: user.id,
           email: user.email,
           displayName: user.displayName,
+          role: user.role || 'user',
           tutorialCompleted: user.tutorialCompleted
         }
       });
@@ -158,7 +161,7 @@ router.get('/me', authenticate, async (req, res) => {
   // req.user is already set by Passport from session
   // But we'll fetch fresh data from database to ensure it's up to date
   const db = getDb();
-  const user = await db.get('SELECT id, email, display_name, tutorial_completed, created_at FROM users WHERE id = ?', req.user.id || req.user.userId);
+  const user = await db.get('SELECT id, email, display_name, role, tutorial_completed, created_at FROM users WHERE id = ?', req.user.id || req.user.userId);
   
   if (!user) {
     // This case might happen if session is valid but user was deleted
@@ -172,6 +175,7 @@ router.get('/me', authenticate, async (req, res) => {
     id: user.id,
     email: user.email,
     displayName: user.display_name,
+    role: user.role || 'user',
     tutorialCompleted: user.tutorial_completed === 1,
     createdAt: user.created_at
   });
