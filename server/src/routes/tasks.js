@@ -10,6 +10,8 @@ import { authenticate } from '../middleware/auth.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { logEvent, EventTypes } from '../services/eventLog.js';
+
 
 const router = express.Router();
 
@@ -157,6 +159,21 @@ router.post('/:taskId/submit', authenticate, async (req, res) => {
         VALUES (?, ?, ?, ?)
       `, userId, taskRow.id, scoreAwarded, timeMs || null);
     }
+    // Log event - use FLAG_SUBMIT for flag-type tasks, TASK_SUBMIT for others
+    const eventType = task.checkType === 'flag' ? EventTypes.FLAG_SUBMIT : EventTypes.TASK_SUBMIT;
+    await logEvent({
+      participantId: req.participantId,
+      userId,
+      eventType,
+      scenarioCode,
+      taskId,
+      eventData: {
+        correct: validation.correct,
+        scoreAwarded,
+        timeMs: timeMs || null,
+        alreadyCompleted: false
+      }
+    });
 
     // Get task completion score total
     const taskScoreResult = await db.get(`
@@ -539,6 +556,7 @@ function parseCommandArgs(input) {
  * This is where all validation logic lives - never exposed to client
  */
 function validateAnswer(task, answer) {
+  
   // Handle interaction-based tasks
   if (task.checkType === 'interaction' && task.interactionTarget) {
     // Answer format: "interaction:targetName"
@@ -547,6 +565,18 @@ function validateAnswer(task, answer) {
       if (target === task.interactionTarget) {
         return { correct: true };
       }
+    }
+    return { correct: false };
+  }
+
+  // Handle CTF/flag-style tasks (checkType is 'flag')
+  if (task.checkType === 'flag' && task.solutionValue) {
+    // Normalize both answer and solution for comparison (case-insensitive, trimmed)
+    const normalizedAnswer = answer.trim().toLowerCase();
+    const normalizedSolution = task.solutionValue.trim().toLowerCase();
+    
+    if (normalizedAnswer === normalizedSolution) {
+      return { correct: true };
     }
     return { correct: false };
   }
@@ -566,10 +596,10 @@ function validateAnswer(task, answer) {
     if (cmd !== task.checkCommand) {
       return { correct: false };
     }
-
+    
     // Check args if specified
     if (task.checkArgs && task.checkArgs.length > 0) {
-      // Normalize paths for comparison (remove trailing slashes)
+      // Normalize paths for comparison
       const normalizedArgs = args.map(arg => arg.replace(/\/$/, ''));
       const normalizedExpected = task.checkArgs.map(arg => arg.replace(/\/$/, ''));
 
@@ -591,6 +621,9 @@ function validateAnswer(task, answer) {
     return { correct: true };
   }
 
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/d7f2affb-5189-4352-bd9b-6f1d6c1e402f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'tasks.js:575',message:'validateAnswer fallthrough - no matching case',data:{taskId:task.id,checkType:task.checkType,checkCommand:task.checkCommand,answer:answer,willReturnFalse:true},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H4'})}).catch(()=>{});
+  // #endregion
   // Unknown task type
   return { correct: false };
 }
@@ -725,6 +758,16 @@ router.get('/:taskId/hint', authenticate, async (req, res) => {
     // Track hint usage server-side
     await trackHintUsage(db, userId, taskInfo.scenarioCode);
 
+    await logEvent({
+      participantId: req.participantId,
+      userId,
+      eventType: EventTypes.HINT_REQUEST,
+      scenarioCode: taskInfo.scenarioCode,
+      taskId,
+      eventData: {
+        hintCost
+      }
+    });
     // Return the hint
     // Note: Client will deduct points after receiving the hint
     // This ensures the user only pays if they successfully receive the hint
