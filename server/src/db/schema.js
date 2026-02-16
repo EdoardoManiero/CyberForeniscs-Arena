@@ -22,6 +22,7 @@ export async function initSchema(db) {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       display_name TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user',
       tutorial_completed INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
@@ -31,9 +32,9 @@ export async function initSchema(db) {
   // SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so we check first
   try {
     const tableInfo = await db.all("PRAGMA table_info(users)");
-    const hasColumn = tableInfo.some(col => col.name === 'tutorial_completed');
+    const hasTutorialColumn = tableInfo.some(col => col.name === 'tutorial_completed');
 
-    if (!hasColumn) {
+    if (!hasTutorialColumn) {
       await db.exec(`
         ALTER TABLE users ADD COLUMN tutorial_completed INTEGER NOT NULL DEFAULT 0
       `);
@@ -43,6 +44,23 @@ export async function initSchema(db) {
     }
   } catch (error) {
     console.warn('Error checking/adding tutorial_completed column:', error.message);
+  }
+
+  // Add role column to existing users table if it doesn't exist
+  try {
+    const tableInfo = await db.all("PRAGMA table_info(users)");
+    const hasRoleColumn = tableInfo.some(col => col.name === 'role');
+
+    if (!hasRoleColumn) {
+      await db.exec(`
+        ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'
+      `);
+      console.log('Added role column to users table');
+    } else {
+      console.log('role column already exists');
+    }
+  } catch (error) {
+    console.warn('Error checking/adding role column:', error.message);
   }
 
   // Scenarios table
@@ -205,13 +223,49 @@ export async function initSchema(db) {
     )
   `);
 
+  // Event log table for anonymous evaluation tracking
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS event_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      participant_id TEXT NOT NULL,
+      user_id INTEGER,
+      event_type TEXT NOT NULL,
+      scenario_code TEXT,
+      task_id TEXT,
+      event_data TEXT DEFAULT '{}',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Create indexes for event_log queries
+  try {
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_event_log_participant 
+      ON event_log(participant_id)
+    `);
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_event_log_type 
+      ON event_log(event_type)
+    `);
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_event_log_scenario 
+      ON event_log(scenario_code)
+    `);
+    console.log('Created indexes on event_log table');
+  } catch (error) {
+    console.log('Indexes on event_log already exist or error:', error.message);
+  }
+
   // Initialize badges with points
   await initializeBadges(db);
 
   // Create default user for testing/demo
   await createDefaultUser(db);
 
- console.log('Database schema initialized');
+  // Create admin users (hardcoded, cannot be registered via frontend)
+  await createAdminUsers(db);
+
+  console.log('Database schema initialized');
 }
 
 /**
@@ -276,14 +330,65 @@ async function createDefaultUser(db) {
     // Hash password using bcrypt (same as registration)
     const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
-    // Insert default user
+    // Insert default user with 'user' role
     const result = await db.run(`
-      INSERT INTO users (email, password_hash, display_name, tutorial_completed)
-      VALUES (?, ?, ?, 0)
+      INSERT INTO users (email, password_hash, display_name, role, tutorial_completed)
+      VALUES (?, ?, ?, 'user', 0)
     `, defaultEmail, passwordHash, defaultDisplayName);
 
     console.log(`Created default user "${defaultEmail}" (id: ${result.lastID})`);
   } catch (error) {
     console.warn('Error creating default user:', error.message);
+  }
+}
+
+/**
+ * Create admin users for system administration
+ * These users are hardcoded and cannot be registered via the frontend
+ * @param {import('sqlite').Database} db - SQLite database instance
+ */
+async function createAdminUsers(db) {
+  const adminUsers = [
+    {
+      email: 'admin1@cyberforensics.arena',
+      password: 'AdminPass123!',
+      displayName: 'Admin One'
+    },
+    {
+      email: 'admin2@cyberforensics.arena',
+      password: 'AdminPass456!',
+      displayName: 'Admin Two'
+    }
+  ];
+
+  for (const admin of adminUsers) {
+    try {
+      // Check if admin user already exists
+      const existing = await db.get('SELECT id, role FROM users WHERE email = ?', admin.email);
+      
+      if (existing) {
+        // Ensure existing user has admin role
+        if (existing.role !== 'admin') {
+          await db.run('UPDATE users SET role = ? WHERE id = ?', 'admin', existing.id);
+          console.log(`Updated user "${admin.email}" to admin role`);
+        } else {
+          console.log(`Admin user "${admin.email}" already exists (id: ${existing.id})`);
+        }
+        continue;
+      }
+
+      // Hash password using bcrypt
+      const passwordHash = await bcrypt.hash(admin.password, 10);
+
+      // Insert admin user with 'admin' role
+      const result = await db.run(`
+        INSERT INTO users (email, password_hash, display_name, role, tutorial_completed)
+        VALUES (?, ?, ?, 'admin', 1)
+      `, admin.email, passwordHash, admin.displayName);
+
+      console.log(`Created admin user "${admin.email}" (id: ${result.lastID})`);
+    } catch (error) {
+      console.warn(`Error creating admin user "${admin.email}":`, error.message);
+    }
   }
 }
