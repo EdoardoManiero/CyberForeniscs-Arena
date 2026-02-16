@@ -21,7 +21,8 @@ export default defineConfig({
             },
             input: {
                 main: 'index.html',
-                editor: 'editor.html'
+                editor: 'editor.html',
+                admin: 'admin.html'
             }
         }
     },
