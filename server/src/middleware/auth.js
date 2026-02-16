@@ -28,3 +28,20 @@ export function optionalAuth(req, res, next) {
   // Just continue regardless
   next();
 }
+
+/**
+ * Middleware to verify user has admin role
+ * Must be used after authenticate middleware
+ * Returns 403 Forbidden if user is not an admin
+ */
+export function requireAdmin(req, res, next) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  return next();
+}
