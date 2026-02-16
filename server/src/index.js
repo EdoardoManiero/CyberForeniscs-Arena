@@ -28,6 +28,9 @@ import { consoleRoutes } from './routes/console.js';
 import { leaderboardRoutes } from './routes/leaderboard.js';
 import { scenarioRoutes } from './routes/scenarios.js';
 import { deviceRoutes } from './routes/devices.js';
+import { trackingRoutes } from './routes/tracking.js';
+import { adminRoutes } from './routes/admin.js';
+import { extractParticipantId } from './middleware/participantId.js';
 
 // Load environment variables
 dotenv.config();
@@ -82,6 +85,9 @@ app.use(session({
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Extract participant ID from all requests (for anonymous tracking)
+app.use(extractParticipantId);
 
 // ============================================================================
 // RATE LIMITING
@@ -140,6 +146,8 @@ app.use('/api/console', consoleLimiter, consoleRoutes);
 app.use('/api/leaderboard', apiLimiter, leaderboardRoutes);
 app.use('/api/scenarios', apiLimiter, scenarioRoutes);
 app.use('/api/devices', apiLimiter, deviceRoutes);
+app.use('/api/tracking', apiLimiter, trackingRoutes);
+app.use('/api/admin', apiLimiter, adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
