@@ -13,6 +13,7 @@ import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { loadScenariosData } from './tasks.js';
+import { requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -130,11 +131,46 @@ router.get('/', (req, res) => {
 });
 
 /**
- * Save scenarios
+ * Get all scenarios with FULL data (Admin only)
+ * GET /api/scenarios/full
+ * 
+ * Returns complete scenario data INCLUDING hints and solutionValue.
+ * ONLY accessible by admins for the editor.
+ */
+router.get('/full', requireAdmin, (req, res) => {
+  try {
+    // Check if file exists
+    if (!existsSync(SCENARIOS_PATH)) {
+      throw new Error(`Scenarios file not found at: ${SCENARIOS_PATH}`);
+    }
+
+    // Return raw scenarios data (includes hints, solutionValue, etc.)
+    const scenariosData = JSON.parse(readFileSync(SCENARIOS_PATH, 'utf-8'));
+    
+    // Filter out internal keys (starting with _) but keep all task fields
+    const filteredData = {};
+    for (const [key, scenario] of Object.entries(scenariosData)) {
+      if (!key.startsWith('_')) {
+        filteredData[key] = scenario;
+      }
+    }
+
+    console.log('[Scenarios] Admin fetched full scenario data');
+    res.json(filteredData);
+  } catch (error) {
+    console.error('Error loading full scenarios:', error);
+    res.status(500).json({ error: 'Failed to load scenarios' });
+  }
+});
+
+/**
+ * Save scenarios (Admin only)
  * POST /api/scenarios
  * Body: { scenarios: { ... } }
+ * 
+ * Requires admin role to access
  */
-router.post('/', express.json(), (req, res) => {
+router.post('/', requireAdmin, express.json(), (req, res) => {
   try {
     const { scenarios } = req.body;
 
