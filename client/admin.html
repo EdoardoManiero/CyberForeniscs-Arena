@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - CyberForensics Arena</title>
+    <link rel="stylesheet" href="src/admin/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div id="app">
+        <header class="admin-header">
+            <div class="header-left">
+                <h1><i class="fa-solid fa-chart-line"></i> Admin Dashboard</h1>
+            </div>
+            <div class="header-controls">
+                <button id="refreshBtn" class="btn btn-secondary">
+                    <i class="fa-solid fa-sync"></i> Refresh
+                </button>
+                <a href="editor.html" class="btn btn-secondary">
+                    <i class="fa-solid fa-edit"></i> Editor
+                </a>
+                <a href="./" class="btn btn-secondary">
+                    <i class="fa-solid fa-gamepad"></i> Back to Game
+                </a>
+            </div>
+        </header>
+
+        <div class="admin-container">
+            <!-- Stats Cards -->
+            <section class="stats-section">
+                <div class="stats-grid" id="statsGrid">
+                    <!-- Stats cards will be injected here -->
+                    <div class="stat-card loading">
+                        <div class="stat-icon"><i class="fas fa-spinner fa-spin"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-value">--</span>
+                            <span class="stat-label">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tabs -->
+            <div class="admin-tabs">
+                <button class="tab-btn active" data-tab="logs">
+                    <i class="fas fa-list"></i> Event Logs
+                </button>
+                <button class="tab-btn" data-tab="users">
+                    <i class="fas fa-users"></i> Users
+                </button>
+                <button class="tab-btn" data-tab="activity">
+                    <i class="fas fa-chart-bar"></i> Activity
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Event Logs Tab -->
+                <div class="tab-panel active" id="logsPanel">
+                    <!-- Filters -->
+                    <div class="filters-bar">
+                        <div class="filter-group">
+                            <label for="eventTypeFilter">Event Type</label>
+                            <select id="eventTypeFilter">
+                                <option value="">All Types</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="scenarioFilter">Scenario</label>
+                            <select id="scenarioFilter">
+                                <option value="">All Scenarios</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="participantFilter">Participant ID</label>
+                            <input type="text" id="participantFilter" placeholder="CFA-XXXXXX">
+                        </div>
+                        <div class="filter-group">
+                            <label for="userIdFilter">User ID</label>
+                            <input type="number" id="userIdFilter" placeholder="User ID">
+                        </div>
+                        <button id="applyFilters" class="btn btn-primary btn-small">
+                            <i class="fas fa-filter"></i> Apply
+                        </button>
+                        <button id="clearFilters" class="btn btn-secondary btn-small">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                        <button id="exportLogsBtn" class="btn btn-secondary btn-small">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                    </div>
+
+                    <!-- Logs Table -->
+                    <div class="table-container">
+                        <table class="data-table" id="logsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Time</th>
+                                    <th>Event Type</th>
+                                    <th>Participant</th>
+                                    <th>User</th>
+                                    <th>Scenario</th>
+                                    <th>Data</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody">
+                                <tr>
+                                    <td colspan="7" class="loading-row">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading logs...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination" id="logsPagination">
+                        <button class="pagination-btn" id="logsPrevBtn" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span class="pagination-info" id="logsPaginationInfo">Page 1 of 1</span>
+                        <button class="pagination-btn" id="logsNextBtn" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Users Tab -->
+                <div class="tab-panel" id="usersPanel">
+                    <div class="filters-bar">
+                        <div class="filter-group">
+                            <label for="roleFilter">Role</label>
+                            <select id="roleFilter">
+                                <option value="">All Roles</option>
+                                <option value="user">Users</option>
+                                <option value="admin">Admins</option>
+                            </select>
+                        </div>
+                        <button id="applyUserFilters" class="btn btn-primary btn-small">
+                            <i class="fas fa-filter"></i> Apply
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table" id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Display Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Tasks</th>
+                                    <th>Score</th>
+                                    <th>Events</th>
+                                    <th>Last Activity</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <tr>
+                                    <td colspan="9" class="loading-row">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading users...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination" id="usersPagination">
+                        <button class="pagination-btn" id="usersPrevBtn" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span class="pagination-info" id="usersPaginationInfo">Page 1 of 1</span>
+                        <button class="pagination-btn" id="usersNextBtn" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Activity Tab -->
+                <div class="tab-panel" id="activityPanel">
+                    <div class="activity-grid">
+                        <div class="activity-card">
+                            <h3><i class="fas fa-chart-line"></i> Events by Type</h3>
+                            <div class="chart-container" id="eventsByTypeChart">
+                                <!-- Chart will be rendered here -->
+                            </div>
+                        </div>
+                        <div class="activity-card">
+                            <h3><i class="fas fa-calendar-alt"></i> Recent Activity (Last 7 Days)</h3>
+                            <div class="activity-list" id="recentActivityList">
+                                <!-- Activity list will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Stats Modal -->
+    <div class="modal" id="userStatsModal">
+        <div class="modal-backdrop" id="userStatsModalBackdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-chart"></i> <span id="userStatsName">User Stats</span></h2>
+                <button class="modal-close" id="closeUserStatsModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="userStatsBody">
+                <!-- User stats will be injected here -->
+                <div class="loading-row">
+                    <i class="fas fa-spinner fa-spin"></i> Loading user stats...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="src/admin/AdminApp.js"></script>
+</body>
+
+</html>
+
