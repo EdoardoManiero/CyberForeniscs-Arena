@@ -1121,9 +1121,9 @@ const TaskManager = {
             }
           }
 
-          // Mark task as completed in task manager
-          if (task.id && window.markTaskCompleted) {
-            window.markTaskCompleted(task.id);
+          // Notify logic layer that a task was completed via valid terminal command
+          if (task.id) {
+            eventBus.emit(Events.TERMINAL_COMMAND_VALIDATED, { taskId: task.id });
           }
         } else {
           console.warn('[Console] Task submission marked as incorrect');

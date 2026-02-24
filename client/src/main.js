@@ -62,7 +62,7 @@ const appState = {
  */
 async function initializeApp() {
   const loadingScreen = document.getElementById('appLoading');
-  
+
   try {
     console.log('[Main] Starting initialization...');
 
@@ -541,26 +541,26 @@ document.addEventListener('visibilitychange', () => {
 
   if (document.visibilityState === 'visible') {
     console.log('[Main] Tab became visible, restoring controls...');
-    
+
     const camera = appState.scene.activeCamera;
     const canvas = appState.canvas;
-    
+
     if (camera && canvas) {
       // Detach and re-attach camera controls to reset input state
       try {
         camera.detachControl();
         camera.attachControl(canvas, true);
         camera.speed = 0.2; // Restore speed after re-attach
-        
+
         // Focus canvas to enable keyboard input
         canvas.focus();
-        
+
         console.log('[Main] Camera controls restored after tab focus');
       } catch (e) {
         console.warn('[Main] Failed to restore camera controls:', e);
       }
     }
-    
+
     // Force a resize in case window size changed while away
     if (appState.engine) {
       appState.engine.resize();

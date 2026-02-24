@@ -25,7 +25,7 @@ class EventBus {
     if (!this.listeners.has(eventName)) {
       this.listeners.set(eventName, []);
     }
-    
+
     const handlers = this.listeners.get(eventName);
     handlers.push(handler);
 
@@ -49,7 +49,7 @@ class EventBus {
       handler(...args);
       unsubscribe();
     };
-    
+
     const unsubscribe = this.on(eventName, wrappedHandler);
     return unsubscribe;
   }
@@ -99,44 +99,47 @@ export const eventBus = new EventBus();
 // Core events - connect rendering, logic, and UI layers
 export const Events = {
   // ===== RENDERING LAYER     LOGIC LAYER =====
-  
+
   /** User clicked on a mesh in the 3D scene */
   MESH_CLICKED: 'mesh:clicked',
-  
+
   /** User hovered over a mesh */
   MESH_HOVERED: 'mesh:hovered',
-  
+
   /** User stopped hovering */
   MESH_HOVER_END: 'mesh:hoverEnd',
-  
+
   /** Console was toggled open/closed */
   CONSOLE_TOGGLE: 'console:toggle',
-  
+
   /** User typed a command in the console */
   CONSOLE_COMMAND_EXECUTED: 'console:commandExecuted',
-  
+
   // ===== LOGIC LAYER     UI LAYER =====
-  
+
   /** Task was completed */
   TASK_COMPLETED: 'task:completed',
-  
+
   /** Advanced to next task */
   TASK_ADVANCED: 'task:advanced',
-  
+
   /** Scenario changed */
   SCENARIO_CHANGED: 'scenario:changed',
-  
+
   /** Scenario completed */
   SCENARIO_COMPLETED: 'scenario:completed',
-  
+
   /** Progress updated */
   PROGRESS_UPDATED: 'progress:updated',
-  
+
   /** Tutorial step changed */
   TUTORIAL_STEP_CHANGED: 'tutorial:stepChanged',
-  
+
   /** Tutorial completed */
   TUTORIAL_COMPLETED: 'tutorial:completed',
+
+  /** Terminal command successfully validated by server */
+  TERMINAL_COMMAND_VALIDATED: 'terminal:commandValidated',
 
   /** User moved in the scene (for tutorial) */
   TUTORIAL_MOVED: 'tutorial:moved',
@@ -158,28 +161,28 @@ export const Events = {
 
   /** User clicked on canvas to look around (for tutorial) */
   TUTORIAL_CANVAS_CLICKED: 'tutorial:canvasClicked',
-  
+
   // ===== LOGIC LAYER     RENDERING LAYER =====
-  
+
   /** Highlights should be updated for current scenario */
   SCENARIO_HIGHLIGHTS_UPDATED: 'scenario:highlightsUpdated',
-  
+
   // ===== UI LAYER     RENDERING LAYER =====
-  
+
   /** Console visibility changed (for input handling) */
   UI_CONSOLE_VISIBLE_CHANGED: 'ui:consoleVisibilityChanged',
-  
+
   // ===== AUTHENTICATION EVENTS =====
-  
+
   /** User logged in */
   USER_LOGGED_IN: 'auth:userLoggedIn',
-  
+
   /** User logged out */
   USER_LOGGED_OUT: 'auth:userLoggedOut',
-  
+
   /** User registered */
   USER_REGISTERED: 'auth:userRegistered',
-  
+
   /** Authentication success */
   AUTH_SUCCESS: 'auth:success'
 };
@@ -187,8 +190,8 @@ export const Events = {
 // Debug utility to log all events for troubleshooting
 export function enableEventBusDebug(verbose = false) {
   const originalEmit = eventBus.emit.bind(eventBus);
-  
-  eventBus.emit = function(eventName, data) {
+
+  eventBus.emit = function (eventName, data) {
     if (verbose) {
       console.log(`[EventBus] ${eventName}`, data);
     }

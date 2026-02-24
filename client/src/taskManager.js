@@ -138,8 +138,12 @@ export function markTaskCompleted(taskId) {
   }
 }
 
-// Export for use by console module
-window.markTaskCompleted = markTaskCompleted;
+// Listen for completed tasks from the terminal via EventBus
+eventBus.on(Events.TERMINAL_COMMAND_VALIDATED, (data) => {
+  if (data && data.taskId) {
+    markTaskCompleted(data.taskId);
+  }
+});
 
 // ============================================================================
 // PUBLIC API - SCENARIOS

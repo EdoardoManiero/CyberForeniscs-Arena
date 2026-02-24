@@ -1,13 +1,13 @@
 /**
- * interaction.js - User Interaction Management (RENDERING LAYER)
+ * interaction.js - User Interaction Management (LOGIC LAYER)
  * 
  * Handles mouse hover effects, clicking, keyboard input, and mesh interactions.
  * Emits events for logic and UI layers to handle.
  * 
  * ARCHITECTURAL NOTE:
- * - This is a RENDERING LAYER component
- * - ONLY imports from other rendering layer (scene.js) and event bus
- * - Does NOT import from Logic (taskManager) or UI (console, taskHud) layers
+ * - This is a LOGIC LAYER component (handles input & interaction evaluation)
+ * - ONLY imports from rendering layer (scene.js) to manipulate interactions and event bus
+ * - Does NOT import from UI (console, taskHud) layers
  * - Communicates via events: MESH_CLICKED, CONSOLE_TOGGLE, MESH_HOVERED, MESH_HOVER_END
  */
 
