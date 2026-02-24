@@ -11,21 +11,21 @@ class AdminApp {
     constructor() {
         this.user = null;
         this.currentTab = 'logs';
-        
+
         // Pagination state
         this.logsPage = 1;
         this.usersPage = 1;
         this.logsPagination = null;
         this.usersPagination = null;
-        
+
         // Filter state
         this.logsFilters = {};
         this.usersFilters = {};
-        
+
         // Cache for filter options
         this.eventTypes = [];
         this.scenarioCodes = [];
-        
+
         this.init();
     }
 
@@ -35,17 +35,17 @@ class AdminApp {
         if (!isAuthorized) {
             return;
         }
-        
+
         // Setup event listeners
         this.setupEventListeners();
-        
+
         // Load initial data
         await this.loadFilterOptions();
         await this.loadStats();
         await this.loadLogs();
         await this.loadUsers();
     }
-    
+
     /**
      * Check if user is authenticated and has admin role
      */
@@ -53,17 +53,17 @@ class AdminApp {
         try {
             const user = await authAPI.getMe();
             this.user = user;
-            
+
             if (!user) {
                 this.showAccessDenied('Please log in to access the Admin Dashboard.');
                 return false;
             }
-            
+
             if (user.role !== 'admin') {
                 this.showAccessDenied('Admin access required. Only administrators can access the Admin Dashboard.');
                 return false;
             }
-            
+
             console.log('[AdminApp] Admin access granted for:', user.email);
             return true;
         } catch (error) {
@@ -72,7 +72,7 @@ class AdminApp {
             return false;
         }
     }
-    
+
     /**
      * Show access denied message
      */
@@ -104,12 +104,12 @@ class AdminApp {
                 this.switchTab(btn.dataset.tab);
             });
         });
-        
+
         // Refresh button
         document.getElementById('refreshBtn')?.addEventListener('click', () => {
             this.refreshAll();
         });
-        
+
         // Logs filters
         document.getElementById('applyFilters')?.addEventListener('click', () => {
             this.applyLogsFilters();
@@ -117,7 +117,7 @@ class AdminApp {
         document.getElementById('clearFilters')?.addEventListener('click', () => {
             this.clearLogsFilters();
         });
-        
+
         // Logs pagination
         document.getElementById('logsPrevBtn')?.addEventListener('click', () => {
             if (this.logsPage > 1) {
@@ -131,12 +131,12 @@ class AdminApp {
                 this.loadLogs();
             }
         });
-        
+
         // Users filters
         document.getElementById('applyUserFilters')?.addEventListener('click', () => {
             this.applyUsersFilters();
         });
-        
+
         // Users pagination
         document.getElementById('usersPrevBtn')?.addEventListener('click', () => {
             if (this.usersPage > 1) {
@@ -150,12 +150,12 @@ class AdminApp {
                 this.loadUsers();
             }
         });
-        
+
         // Export logs button
         document.getElementById('exportLogsBtn')?.addEventListener('click', () => {
             this.exportLogsToCSV();
         });
-        
+
         // User stats modal close
         document.getElementById('closeUserStatsModal')?.addEventListener('click', () => {
             this.closeUserStatsModal();
@@ -170,12 +170,12 @@ class AdminApp {
      */
     switchTab(tabId) {
         this.currentTab = tabId;
-        
+
         // Update tab buttons
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tabId);
         });
-        
+
         // Update tab panels
         document.querySelectorAll('.tab-panel').forEach(panel => {
             panel.classList.toggle('active', panel.id === `${tabId}Panel`);
@@ -191,7 +191,7 @@ class AdminApp {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
         }
-        
+
         try {
             await Promise.all([
                 this.loadStats(),
@@ -215,10 +215,10 @@ class AdminApp {
                 adminAPI.getEventTypes(),
                 adminAPI.getScenarioCodes()
             ]);
-            
+
             this.eventTypes = eventTypesRes.eventTypes || [];
             this.scenarioCodes = scenarioCodesRes.scenarioCodes || [];
-            
+
             // Populate event type filter
             const eventTypeSelect = document.getElementById('eventTypeFilter');
             if (eventTypeSelect) {
@@ -229,7 +229,7 @@ class AdminApp {
                     eventTypeSelect.appendChild(option);
                 });
             }
-            
+
             // Populate scenario filter
             const scenarioSelect = document.getElementById('scenarioFilter');
             if (scenarioSelect) {
@@ -263,7 +263,7 @@ class AdminApp {
     renderStats(stats) {
         const grid = document.getElementById('statsGrid');
         if (!grid) return;
-        
+
         grid.innerHTML = `
             <div class="stat-card">
                 <div class="stat-icon users"><i class="fas fa-users"></i></div>
@@ -301,7 +301,7 @@ class AdminApp {
                 </div>
             </div>
         `;
-        
+
         // Render activity charts
         this.renderActivityCharts(stats);
     }
@@ -314,7 +314,7 @@ class AdminApp {
         const chartContainer = document.getElementById('eventsByTypeChart');
         if (chartContainer && stats.events?.byType) {
             const maxCount = Math.max(...stats.events.byType.map(e => e.count), 1);
-            
+
             chartContainer.innerHTML = stats.events.byType.slice(0, 8).map(item => `
                 <div class="chart-bar">
                     <span class="chart-bar-label">${this.formatEventType(item.event_type)}</span>
@@ -326,7 +326,7 @@ class AdminApp {
                 </div>
             `).join('');
         }
-        
+
         // Recent activity list
         const activityList = document.getElementById('recentActivityList');
         if (activityList && stats.recentActivity) {
@@ -376,14 +376,37 @@ class AdminApp {
         this.logsPage = 1;
         this.loadLogs();
     }
-    
+
     /**
      * Export logs to CSV
+     * Uses authenticated fetch (credentials: include) so the session cookie
+     * is forwarded correctly on cross-origin deployments (Render/Vercel).
      */
-    exportLogsToCSV() {
-        const url = adminAPI.getLogsExportUrl(this.logsFilters);
-        // Open in new tab for download
-        window.open(url, '_blank');
+    async exportLogsToCSV() {
+        const btn = document.getElementById('exportLogsBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+        }
+        try {
+            const blob = await adminAPI.exportLogs(this.logsFilters);
+            const objectUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = objectUrl;
+            a.download = `event_logs_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(objectUrl);
+        } catch (error) {
+            console.error('[AdminApp] CSV export failed:', error);
+            alert('Export failed: ' + error.message);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-download"></i> Export CSV';
+            }
+        }
     }
 
     /**
@@ -394,14 +417,14 @@ class AdminApp {
         if (tbody) {
             tbody.innerHTML = '<tr><td colspan="7" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading logs...</td></tr>';
         }
-        
+
         try {
             const params = {
                 page: this.logsPage,
                 limit: 25,
                 ...this.logsFilters
             };
-            
+
             const result = await adminAPI.getLogs(params);
             this.logsPagination = result.pagination;
             this.renderLogs(result.logs);
@@ -420,12 +443,12 @@ class AdminApp {
     renderLogs(logs) {
         const tbody = document.getElementById('logsTableBody');
         if (!tbody) return;
-        
+
         if (logs.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="loading-row">No logs found</td></tr>';
             return;
         }
-        
+
         tbody.innerHTML = logs.map(log => `
             <tr>
                 <td>${log.id}</td>
@@ -446,7 +469,7 @@ class AdminApp {
         const info = document.getElementById('logsPaginationInfo');
         const prevBtn = document.getElementById('logsPrevBtn');
         const nextBtn = document.getElementById('logsNextBtn');
-        
+
         if (this.logsPagination) {
             if (info) {
                 info.textContent = `Page ${this.logsPagination.page} of ${this.logsPagination.totalPages} (${this.logsPagination.total} total)`;
@@ -479,14 +502,14 @@ class AdminApp {
         if (tbody) {
             tbody.innerHTML = '<tr><td colspan="9" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading users...</td></tr>';
         }
-        
+
         try {
             const params = {
                 page: this.usersPage,
                 limit: 25,
                 ...this.usersFilters
             };
-            
+
             const result = await adminAPI.getUsers(params);
             this.usersPagination = result.pagination;
             this.renderUsers(result.users);
@@ -505,12 +528,12 @@ class AdminApp {
     renderUsers(users) {
         const tbody = document.getElementById('usersTableBody');
         if (!tbody) return;
-        
+
         if (users.length === 0) {
             tbody.innerHTML = '<tr><td colspan="10" class="loading-row">No users found</td></tr>';
             return;
         }
-        
+
         tbody.innerHTML = users.map(user => `
             <tr>
                 <td>${user.id}</td>
@@ -532,7 +555,7 @@ class AdminApp {
                 </td>
             </tr>
         `).join('');
-        
+
         // Add event listeners for action buttons
         tbody.querySelectorAll('.view-user-stats').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -541,7 +564,7 @@ class AdminApp {
                 this.showUserStats(userId, userName);
             });
         });
-        
+
         tbody.querySelectorAll('.filter-user-logs').forEach(btn => {
             btn.addEventListener('click', () => {
                 const userId = btn.dataset.userId;
@@ -552,7 +575,7 @@ class AdminApp {
             });
         });
     }
-    
+
     /**
      * Show user stats modal
      */
@@ -560,14 +583,14 @@ class AdminApp {
         const modal = document.getElementById('userStatsModal');
         const modalBody = document.getElementById('userStatsBody');
         const modalName = document.getElementById('userStatsName');
-        
+
         if (!modal || !modalBody) return;
-        
+
         // Show modal with loading state
         modal.classList.add('active');
         modalName.textContent = `${userName}'s Stats`;
         modalBody.innerHTML = '<div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading user stats...</div>';
-        
+
         try {
             const data = await adminAPI.getUserStats(userId);
             this.renderUserStatsModal(data);
@@ -576,16 +599,16 @@ class AdminApp {
             modalBody.innerHTML = '<div class="loading-row">Failed to load user stats</div>';
         }
     }
-    
+
     /**
      * Render user stats in modal
      */
     renderUserStatsModal(data) {
         const modalBody = document.getElementById('userStatsBody');
         if (!modalBody) return;
-        
+
         const { user, stats, recentActivity } = data;
-        
+
         modalBody.innerHTML = `
             <!-- Stats Grid -->
             <div class="user-stats-grid">
@@ -690,7 +713,7 @@ class AdminApp {
             ` : ''}
         `;
     }
-    
+
     /**
      * Close user stats modal
      */
@@ -708,7 +731,7 @@ class AdminApp {
         const info = document.getElementById('usersPaginationInfo');
         const prevBtn = document.getElementById('usersPrevBtn');
         const nextBtn = document.getElementById('usersNextBtn');
-        
+
         if (this.usersPagination) {
             if (info) {
                 info.textContent = `Page ${this.usersPagination.page} of ${this.usersPagination.totalPages} (${this.usersPagination.total} total)`;
@@ -727,7 +750,7 @@ class AdminApp {
      */
     formatEventType(type) {
         if (!type) return '-';
-        return type.split('_').map(word => 
+        return type.split('_').map(word =>
             word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' ');
     }

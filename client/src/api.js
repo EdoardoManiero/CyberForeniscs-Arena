@@ -314,7 +314,7 @@ export const adminAPI = {
     if (params.userId) queryParams.set('userId', params.userId);
     if (params.startDate) queryParams.set('startDate', params.startDate);
     if (params.endDate) queryParams.set('endDate', params.endDate);
-    
+
     const queryString = queryParams.toString();
     return apiRequest(`/admin/logs${queryString ? '?' + queryString : ''}`, {
       method: 'GET'
@@ -344,7 +344,7 @@ export const adminAPI = {
     if (params.page) queryParams.set('page', params.page);
     if (params.limit) queryParams.set('limit', params.limit);
     if (params.role) queryParams.set('role', params.role);
-    
+
     const queryString = queryParams.toString();
     return apiRequest(`/admin/users${queryString ? '?' + queryString : ''}`, {
       method: 'GET'
@@ -383,11 +383,13 @@ export const adminAPI = {
   },
 
   /**
-   * Export logs as CSV (returns download URL)
+   * Export logs as CSV — fetches with session cookie attached and returns a Blob.
+   * Use this instead of window.open() so the session cookie is forwarded correctly
+   * on cross-origin deployments (e.g. client on Vercel, server on Render).
    * @param {Object} params - Same filters as getLogs
-   * @returns {string} - CSV download URL
+   * @returns {Blob} - CSV blob ready for download
    */
-  getLogsExportUrl(params = {}) {
+  async exportLogs(params = {}) {
     const queryParams = new URLSearchParams();
     if (params.eventType) queryParams.set('eventType', params.eventType);
     if (params.scenarioCode) queryParams.set('scenarioCode', params.scenarioCode);
@@ -395,9 +397,24 @@ export const adminAPI = {
     if (params.userId) queryParams.set('userId', params.userId);
     if (params.startDate) queryParams.set('startDate', params.startDate);
     if (params.endDate) queryParams.set('endDate', params.endDate);
-    
+
     const queryString = queryParams.toString();
-    return `${API_BASE}/admin/logs/export${queryString ? '?' + queryString : ''}`;
+    const url = `${API_BASE}/admin/logs/export${queryString ? '?' + queryString : ''}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'X-Participant-Id': getParticipantId()
+      }
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+
+    return response.blob();
   }
 };
 
