@@ -11,6 +11,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { logEvent, EventTypes } from '../services/eventLog.js';
+import { validateAnswer, calculateScore } from '../services/validationService.js';
 
 
 const router = express.Router();
@@ -149,8 +150,23 @@ router.post('/:taskId/submit', authenticate, async (req, res) => {
     // Validate answer server-side
     const validation = validateAnswer(task, answer);
 
-    // Calculate score (server-side only, never trust client)
-    const scoreAwarded = validation.correct ? (task.points || 0) : 0;
+    // Count previous wrong attempts for this task (used by calculateScore)
+    const attemptsRow = await db.get(
+      'SELECT COUNT(*) as count FROM task_attempts WHERE user_id = ? AND task_id = ?',
+      userId, taskRow.id
+    );
+    const wrongAttempts = attemptsRow?.count || 0;
+
+    // Log wrong attempt BEFORE calculating score (so the count is always accurate)
+    if (!validation.correct) {
+      await db.run(
+        'INSERT INTO task_attempts (user_id, task_id) VALUES (?, ?)',
+        userId, taskRow.id
+      );
+    }
+
+    // Calculate score via scoringService — modify scoringService.js to add partial scoring
+    const scoreAwarded = calculateScore(task, validation.correct, wrongAttempts);
 
     // Record completion
     if (validation.correct) {
@@ -508,125 +524,8 @@ async function trackHintUsage(db, userId, scenarioCode) {
   `, JSON.stringify(scenarioHints), userId);
 }
 
-/**
- * Parse command line arguments respecting quotes
- * @param {string} input - Command string to parse
- * @returns {Array<string>} Array of command and arguments
- */
-function parseCommandArgs(input) {
-  const args = [];
-  let current = '';
-  let inQuote = false;
-  let quoteChar = '';
-
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-
-    if ((char === '"' || char === "'") && (!inQuote || quoteChar === char)) {
-      if (inQuote && quoteChar === char) {
-        // Closing quote
-        inQuote = false;
-        quoteChar = '';
-      } else if (!inQuote) {
-        // Opening quote
-        inQuote = true;
-        quoteChar = char;
-      } else {
-        current += char;
-      }
-    } else if (char === ' ' && !inQuote) {
-      if (current) {
-        args.push(current);
-        current = '';
-      }
-    } else {
-      current += char;
-    }
-  }
-
-  if (current) {
-    args.push(current);
-  }
-
-  return args;
-}
-
-/**
- * Validate answer against task requirements
- * This is where all validation logic lives - never exposed to client
- */
-function validateAnswer(task, answer) {
-  
-  // Handle interaction-based tasks
-  if (task.checkType === 'interaction' && task.interactionTarget) {
-    // Answer format: "interaction:targetName"
-    if (answer.startsWith('interaction:')) {
-      const target = answer.substring('interaction:'.length);
-      if (target === task.interactionTarget) {
-        return { correct: true };
-      }
-    }
-    return { correct: false };
-  }
-
-  // Handle CTF/flag-style tasks (checkType is 'flag')
-  if (task.checkType === 'flag' && task.solutionValue) {
-    // Normalize both answer and solution for comparison (case-insensitive, trimmed)
-    const normalizedAnswer = answer.trim().toLowerCase();
-    const normalizedSolution = task.solutionValue.trim().toLowerCase();
-    
-    if (normalizedAnswer === normalizedSolution) {
-      return { correct: true };
-    }
-    return { correct: false };
-  }
-
-  // Handle console command tasks (checkType is null but checkCommand is set)
-  if (task.checkCommand) {
-    // Parse the answer into command and args
-    const parsedArgs = parseCommandArgs(answer);
-    if (parsedArgs.length === 0) {
-      return { correct: false };
-    }
-
-    const cmd = parsedArgs[0];
-    const args = parsedArgs.slice(1);
-
-    // Check command matches
-    if (cmd !== task.checkCommand) {
-      return { correct: false };
-    }
-    
-    // Check args if specified
-    if (task.checkArgs && task.checkArgs.length > 0) {
-      // Normalize paths for comparison
-      const normalizedArgs = args.map(arg => arg.replace(/\/$/, ''));
-      const normalizedExpected = task.checkArgs.map(arg => arg.replace(/\/$/, ''));
-
-      if (normalizedArgs.length !== normalizedExpected.length) {
-        return { correct: false };
-      }
-
-      // Check each arg matches
-      for (let i = 0; i < normalizedArgs.length; i++) {
-        if (normalizedArgs[i] !== normalizedExpected[i]) {
-          return { correct: false };
-        }
-      }
-    } else if (args.length > 0) {
-      // Task expects no args but answer has args
-      return { correct: false };
-    }
-
-    return { correct: true };
-  }
-
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/d7f2affb-5189-4352-bd9b-6f1d6c1e402f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'tasks.js:575',message:'validateAnswer fallthrough - no matching case',data:{taskId:task.id,checkType:task.checkType,checkCommand:task.checkCommand,answer:answer,willReturnFalse:true},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H4'})}).catch(()=>{});
-  // #endregion
-  // Unknown task type
-  return { correct: false };
-}
+// validateAnswer and parseCommandArgs are now in ../services/validationService.js
+// calculateScore is now in ../services/scoringService.js
 
 /**
  * Get user's completed tasks and scenarios
