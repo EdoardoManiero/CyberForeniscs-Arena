@@ -6,6 +6,12 @@
  */
 
 import bcrypt from 'bcrypt';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Initialize database schema
@@ -113,7 +119,7 @@ export async function initSchema(db) {
     console.log('Created index on task_completions.user_id');
   } catch (error) {
     // Index might already exist, that's okay
-  console.log('Index on task_completions.user_id already exists or error:', error.message);
+    console.log('Index on task_completions.user_id already exists or error:', error.message);
   }
 
   // Badges table
@@ -223,6 +229,30 @@ export async function initSchema(db) {
     )
   `);
 
+  // Task attempts table — tracks wrong submissions per user per task
+  // Used by scoringService.calculateScore() to compute penalties for wrong attempts.
+  // Each row = one wrong attempt. Correct submissions are NOT recorded here.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS task_attempts (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      INTEGER NOT NULL,
+      task_id      INTEGER NOT NULL,
+      attempted_at TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (task_id) REFERENCES tasks(id)
+    )
+  `);
+
+  try {
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_task_attempts_user_task
+        ON task_attempts(user_id, task_id)
+    `);
+    console.log('Created index on task_attempts(user_id, task_id)');
+  } catch (error) {
+    console.log('Index on task_attempts already exists or error:', error.message);
+  }
+
   // Event log table for anonymous evaluation tracking
   await db.exec(`
     CREATE TABLE IF NOT EXISTS event_log (
@@ -273,26 +303,16 @@ export async function initSchema(db) {
  * @param {import('sqlite').Database} db - SQLite database instance
  */
 async function initializeBadges(db) {
-  // Scenario badges (20 points each)
-  const scenarioBadges = [
-    { code: 'File System Forensic Expert', name: 'File System Forensic Expert', description: 'Completed File System Forensic scenario', points: 20 },
-    { code: 'Network Forensic Expert', name: 'Network Forensic Expert', description: 'Completed Network Forensic scenario', points: 20 },
-    { code: 'Memory Forensic Expert', name: 'Memory Forensic Expert', description: 'Completed Memory Forensic scenario', points: 20 }
-  ];
-
-  // Skill badges (30 points each)
-  const skillBadges = [
-    { code: 'Speed Runner', name: 'Speed Runner', description: 'Complete a scenario in under 5 minutes', points: 30 },
-    { code: 'Hint-Free Expert', name: 'Hint-Free Expert', description: 'Complete a scenario without using any hints', points: 30 }
-  ];
-
-  const allBadges = [...scenarioBadges, ...skillBadges];
+  // Load badge definitions from data file.
+  // To add a new badge: edit server/data/badges.json — no code changes needed.
+  const badgesPath = join(__dirname, '../../data/badges.json');
+  const allBadges = JSON.parse(readFileSync(badgesPath, 'utf-8'));
 
   for (const badge of allBadges) {
     const existing = await db.get('SELECT id, badge_points FROM badges WHERE code = ?', badge.code);
 
     if (existing) {
-      // Update points if badge exists but points are different
+      // Update points if badge exists but points differ from JSON definition
       if (existing.badge_points !== badge.points) {
         await db.run('UPDATE badges SET badge_points = ? WHERE code = ?', badge.points, badge.code);
         console.log(`Updated badge "${badge.code}" points to ${badge.points}`);
@@ -321,7 +341,7 @@ async function createDefaultUser(db) {
   try {
     // Check if default user already exists
     const existing = await db.get('SELECT id FROM users WHERE email = ?', defaultEmail);
-    
+
     if (existing) {
       console.log(`Default user "${defaultEmail}" already exists (id: ${existing.id})`);
       return;
@@ -365,7 +385,7 @@ async function createAdminUsers(db) {
     try {
       // Check if admin user already exists
       const existing = await db.get('SELECT id, role FROM users WHERE email = ?', admin.email);
-      
+
       if (existing) {
         // Ensure existing user has admin role
         if (existing.role !== 'admin') {

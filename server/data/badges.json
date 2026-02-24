@@ -1,0 +1,37 @@
+[
+    {
+        "code": "File System Forensic Expert",
+        "name": "File System Forensic Expert",
+        "description": "Completed File System Forensic scenario",
+        "points": 20,
+        "type": "scenario"
+    },
+    {
+        "code": "Network Forensic Expert",
+        "name": "Network Forensic Expert",
+        "description": "Completed Network Forensic scenario",
+        "points": 20,
+        "type": "scenario"
+    },
+    {
+        "code": "Memory Forensic Expert",
+        "name": "Memory Forensic Expert",
+        "description": "Completed Memory Forensic scenario",
+        "points": 20,
+        "type": "scenario"
+    },
+    {
+        "code": "Speed Runner",
+        "name": "Speed Runner",
+        "description": "Complete a scenario in under 5 minutes",
+        "points": 30,
+        "type": "skill"
+    },
+    {
+        "code": "Hint-Free Expert",
+        "name": "Hint-Free Expert",
+        "description": "Complete a scenario without using any hints",
+        "points": 30,
+        "type": "skill"
+    }
+]
