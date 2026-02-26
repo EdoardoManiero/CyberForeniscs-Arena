@@ -190,6 +190,15 @@ body:not(.tutorial-grayscale) #renderCanvas {
   display: flex !important;
 }
 
+/* During the "Use Help Command" tutorial step, anchor the console to the
+   bottom of the viewport so it does not overlap the top-positioned tutorial modal */
+#consoleContainer.console-tutorial-anchor {
+  top: auto !important;
+  bottom: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
 #consoleHeader {
   display: flex;
   justify-content: space-between;
@@ -902,17 +911,24 @@ body:not(.tutorial-grayscale) #renderCanvas {
   display: flex;
   align-items: center;
   gap: 10px;
+  /* Prevent the row itself from overflowing the HUD panel */
+  min-width: 0;
+  overflow: hidden;
 }
 
 .scenario-selector label {
   color: #22c55e;
   font-weight: bold;
   font-size: 0.85rem;
-  min-width: 70px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .scenario-selector select {
   flex: 1;
+  /* Allow the select to shrink below its intrinsic content width */
+  min-width: 0;
+  max-width: 100%;
   padding: 6px 10px;
   background: rgba(0, 0, 0, 0.7);
   border: 1px solid #22c55e;
@@ -922,6 +938,11 @@ body:not(.tutorial-grayscale) #renderCanvas {
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
+  /* Truncate long option text visually */
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .scenario-selector select:hover {

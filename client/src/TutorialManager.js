@@ -64,7 +64,7 @@ export class TutorialManager {
     return [
       {
         title: 'Forensic Investigator',
-          text: 'You have been assigned to a complex digital case. Your task is to explore this environment, interact with the devices and use the Linux console to analyze the evidence. Every choice counts. Are you ready?',
+        text: 'You have been assigned to a complex digital case. Your task is to explore this environment, interact with the devices and use the Linux console to analyze the evidence. Every choice counts. Are you ready?',
         predicate: () => false,
       },
       {
@@ -99,6 +99,22 @@ export class TutorialManager {
         onEnter: () => {
           // Ensure console stays open for this step
           eventBus.emit(Events.CONSOLE_TOGGLE, { open: true });
+          // Reposition console below the tutorial modal on small screens
+          const consoleEl = document.getElementById('consoleContainer');
+          if (consoleEl) {
+            // Clear any drag-applied inline position so CSS anchor takes over cleanly
+            consoleEl.style.top = '';
+            consoleEl.style.left = '';
+            consoleEl.style.transform = '';
+            consoleEl.classList.add('console-tutorial-anchor');
+          }
+        },
+        onExit: () => {
+          // Remove anchor so the console returns to its default centered position
+          const consoleEl = document.getElementById('consoleContainer');
+          if (consoleEl) {
+            consoleEl.classList.remove('console-tutorial-anchor');
+          }
         }
       }
     ];
@@ -125,7 +141,7 @@ export class TutorialManager {
     this.dom.overlay.classList.add('mode-run');
     document.body.classList.add('tutorial-open');
 
-    
+
     this._applyTheme();
 
     // Set up button handlers for regular tutorial steps
@@ -279,6 +295,8 @@ export class TutorialManager {
 
   _finish(skipped = false) {
     this._restoreHighlights();
+    // Always clean up the tutorial console anchor (e.g. if skipped or on last step)
+    document.getElementById('consoleContainer')?.classList.remove('console-tutorial-anchor');
     this._openGate(skipped);
   }
 
@@ -355,7 +373,7 @@ export class TutorialManager {
 
       try {
         this.scene?.activeCamera?.attachControl(this.dom.canvas, true);
-      } catch {}
+      } catch { }
 
       this._showResumeOverlay(skipped);
     };
@@ -389,7 +407,7 @@ export class TutorialManager {
 
       try {
         window.showTaskHUD?.();
-      } catch {}
+      } catch { }
 
       // Mark tutorial as completed on server
       try {
@@ -564,7 +582,7 @@ export class TutorialManager {
 
     try {
       window.hideTaskHUD?.();
-    } catch {}
+    } catch { }
 
     this.dom.btnSkip.onclick = () => this._finish(true);
     this.dom.btnNext.onclick = () => this._advance();
@@ -574,7 +592,7 @@ export class TutorialManager {
 
     try {
       document.exitPointerLock?.();
-    } catch {}
+    } catch { }
 
     this.dom.canvas?.focus();
   }
