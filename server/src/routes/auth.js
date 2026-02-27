@@ -13,6 +13,7 @@ import bcrypt from 'bcrypt';
 import passport from 'passport';
 import { getDb } from '../db/db.js';
 import { authenticate } from '../middleware/auth.js';
+import { signToken } from '../utils/jwt.js';
 
 const router = express.Router();
 
@@ -75,19 +76,11 @@ router.post('/register', async (req, res) => {
         console.error('Auto-login error after registration:', err);
         return res.status(500).json({ error: 'Registration successful but login failed' });
       }
-
-      // Log login time to console only
       console.log(`User ${email} (ID: ${newUserId}) logged in (after registration) at ${new Date().toISOString()}`);
-
       res.status(201).json({
         success: true,
-        user: {
-          id: newUserId,
-          email,
-          displayName,
-          role: 'user',
-          tutorialCompleted: false
-        }
+        token: signToken(user), // Safari ITP fallback
+        user: { id: newUserId, email, displayName, role: 'user', tutorialCompleted: false }
       });
     });
   } catch (error) {
@@ -107,7 +100,7 @@ router.post('/login', (req, res, next) => {
       console.error('Login error:', err);
       return res.status(500).json({ error: 'Login failed' });
     }
-    
+
     if (!user) {
       // Generic error message to prevent user enumeration
       return res.status(401).json({ error: info?.message || 'Invalid email or password' });
@@ -119,20 +112,11 @@ router.post('/login', (req, res, next) => {
         console.error('Session creation error:', loginErr);
         return res.status(500).json({ error: 'Login failed' });
       }
-
-      // Log login time to console only
       console.log(`User ${user.email} (ID: ${user.id}) logged in at ${new Date().toISOString()}`);
-
-      // Return user data
       res.json({
         success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          displayName: user.displayName,
-          role: user.role || 'user',
-          tutorialCompleted: user.tutorialCompleted
-        }
+        token: signToken(user), // Safari ITP fallback
+        user: { id: user.id, email: user.email, displayName: user.displayName, role: user.role || 'user', tutorialCompleted: user.tutorialCompleted }
       });
     });
   })(req, res, next);
@@ -162,7 +146,7 @@ router.get('/me', authenticate, async (req, res) => {
   // But we'll fetch fresh data from database to ensure it's up to date
   const db = getDb();
   const user = await db.get('SELECT id, email, display_name, role, tutorial_completed, created_at FROM users WHERE id = ?', req.user.id || req.user.userId);
-  
+
   if (!user) {
     // This case might happen if session is valid but user was deleted
     req.logout(() => {
@@ -188,7 +172,7 @@ router.get('/me', authenticate, async (req, res) => {
 router.post('/tutorial/complete', authenticate, async (req, res) => {
   try {
     const db = getDb();
-    
+
     await db.run(`
       UPDATE users 
       SET tutorial_completed = 1 
@@ -210,13 +194,13 @@ router.get('/tutorial/status', authenticate, async (req, res) => {
   try {
     const db = getDb();
     const user = await db.get('SELECT tutorial_completed FROM users WHERE id = ?', req.user.id || req.user.userId);
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ 
-      completed: user.tutorial_completed === 1 
+    res.json({
+      completed: user.tutorial_completed === 1
     });
   } catch (error) {
     console.error('Tutorial status error:', error);
@@ -244,8 +228,8 @@ router.get('/badges', authenticate, async (req, res) => {
 
     const badgeCodes = badges.map(b => b.code);
 
-    res.json({ 
-      badges: badgeCodes 
+    res.json({
+      badges: badgeCodes
     });
   } catch (error) {
     console.error('Get badges error:', error);

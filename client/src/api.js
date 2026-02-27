@@ -11,6 +11,12 @@ const isLocalhost = window.location.hostname === 'localhost' || window.location.
 const PROD_API = 'https://cyberforeniscs-arena-server.onrender.com';
 export const API_BASE = import.meta.env.VITE_API_URL || (isLocalhost ? '/api' : `${PROD_API}/api`);
 
+// Safari ITP blocks cross-origin cookies — store JWT in localStorage instead
+const TOKEN_KEY = 'cfa_token';
+const getToken = () => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } };
+const saveToken = (t) => { try { if (t) localStorage.setItem(TOKEN_KEY, t); } catch { } };
+const dropToken = () => { try { localStorage.removeItem(TOKEN_KEY); } catch { } };
+
 /**
  * Make authenticated API request
  * 
@@ -20,12 +26,14 @@ export const API_BASE = import.meta.env.VITE_API_URL || (isLocalhost ? '/api' : 
  */
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
+  const token = getToken();
   const config = {
     ...options,
-    credentials: 'include', // Include cookies
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       'X-Participant-Id': getParticipantId(),
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers
     }
   };
@@ -63,10 +71,9 @@ export const authAPI = {
    * 
    */
   async register(email, password, displayName) {
-    return apiRequest('/auth/register', {
-      method: 'POST',
-      body: { email, password, displayName }
-    });
+    const data = await apiRequest('/auth/register', { method: 'POST', body: { email, password, displayName } });
+    saveToken(data?.token);
+    return data;
   },
 
 
@@ -78,10 +85,9 @@ export const authAPI = {
    * @returns {Object} - The API object (the user data)
    */
   async login(email, password) {
-    return apiRequest('/auth/login', {
-      method: 'POST',
-      body: { email, password }
-    });
+    const data = await apiRequest('/auth/login', { method: 'POST', body: { email, password } });
+    saveToken(data?.token);
+    return data;
   },
 
   /*
@@ -89,9 +95,9 @@ export const authAPI = {
    * @returns {Object} - The API object (the user data)
    */
   async logout() {
-    return apiRequest('/auth/logout', {
-      method: 'POST'
-    });
+    const data = await apiRequest('/auth/logout', { method: 'POST' });
+    dropToken();
+    return data;
   },
 
   /*
