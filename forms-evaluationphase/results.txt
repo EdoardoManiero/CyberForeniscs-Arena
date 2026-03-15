@@ -1,0 +1,200 @@
+﻿CyberForensics Arena û Evaluation Analysis
+==================================================
+Loaded 12 form responses, 680 log events
+
+================================================================================
+  Participant Profiles
+================================================================================
+ID  | Group | Study Level               | CLI | DF | CTF | Gamified | Logs?
+----+-------+---------------------------+-----+----+-----+----------+------
+P1  | G3    | Other degree              | 2   | 1  | no  | yes      | No   
+P2  | G3    | No university degree      | 1   | 1  | no  | no       | No   
+P3  | G1    | MSc Cybersecurity         | 5   | 4  | yes | yes      | Yes  
+P4  | G2    | BSc Computer Science      | 3   | 3  | no  | no       | Yes  
+P5  | G1    | MSc Cybersecurity         | 3   | 2  | yes | yes      | Yes  
+P6  | G2    | BSc Computer Science;Othe | 4   | 3  | no  | no       | Yes  
+P7  | G1    | MSc Cybersecurity         | 5   | 5  | yes | yes      | Yes  
+P8  | G3    | Other degree              | 1   | 1  | no  | no       | Yes  
+P9  | G1    | MSc Cybersecurity         | 5   | 2  | yes | yes      | Yes  
+P10 | G2    | BSc Computer Science      | 5   | 3  | yes | yes      | Yes  
+P11 | G1    | MSc Cybersecurity         | 5   | 5  | yes | no       | Yes  
+P12 | G3    | No university degree      | 1   | 2  | no  | no       | Yes  
+
+================================================================================
+  SUS Scores
+================================================================================
+ID      | Group | SUS 
+--------+-------+-----
+P1      | G3    | 92.5
+P2      | G3    | 55.0
+P3      | G1    | 97.5
+P4      | G2    | 87.5
+P5      | G1    | 77.5
+P6      | G2    | 90.0
+P7      | G1    | 77.5
+P8      | G3    | 57.5
+P9      | G1    | 97.5
+P10     | G2    | 95.0
+P11     | G1    | 80.0
+P12     | G3    | 47.5
+Mean G1 | G1    | 86.0
+Mean G2 | G2    | 90.8
+Mean G3 | G3    | 63.1
+OVERALL | --    | 79.6
+
+================================================================================
+  Engagement & Perceived Learning
+================================================================================
+ID      | Group | Engagement | Learning
+--------+-------+------------+---------
+P1      | G3    | 4.20       | 3.40    
+P2      | G3    | 4.80       | 3.80    
+P3      | G1    | 5.00       | 5.00    
+P4      | G2    | 5.00       | 4.00    
+P5      | G1    | 4.60       | 4.20    
+P6      | G2    | 5.00       | 4.40    
+P7      | G1    | 3.40       | 3.40    
+P8      | G3    | 4.20       | 3.00    
+P9      | G1    | 4.60       | 5.00    
+P10     | G2    | 5.00       | 3.40    
+P11     | G1    | 5.00       | 5.00    
+P12     | G3    | 4.60       | 3.60    
+Mean G1 | G1    | 4.52       | 4.52    
+Mean G2 | G2    | 5.00       | 3.93    
+Mean G3 | G3    | 4.45       | 3.45    
+
+================================================================================
+  Task Completion & Session Duration
+================================================================================
+ID  | Group | FS Tasks | Net Tasks | FS Duration | Score
+----+-------+----------+-----------+-------------+------
+P1  | G3    | No logs  | --        | --          | --   
+P2  | G3    | No logs  | --        | --          | --   
+P3  | G1    | 17/17    | --        | 11 min      | 365  
+P4  | G2    | 17/17    | 2/14      | 37 min      | 390  
+P5  | G1    | 17/17    | --        | 32 min      | 365  
+P6  | G2    | 17/17    | --        | 15 min      | 365  
+P7  | G1    | 17/17    | 14/14     | 9 min       | 690  
+P8  | G3    | 7/17     | --        | 23 min      | 125  
+P9  | G1    | 1/17     | --        | 3 min       | 10   
+P10 | G2    | 17/17    | --        | 8 min       | 365  
+P11 | G1    | 1/17     | --        | 1 min       | 10   
+P12 | G3    | 17/17    | 12/14     | 36 min      | 625  
+
+================================================================================
+  Command Error Rate
+================================================================================
+ID  | Group | Total Cmds | Errors | Error %
+----+-------+------------+--------+--------
+P3  | G1    | 12         | 1      | 8.3%   
+P4  | G2    | 108        | 13     | 12.0%  
+P5  | G1    | 44         | 12     | 27.3%  
+P6  | G2    | 22         | 2      | 9.1%   
+P7  | G1    | 38         | 6      | 15.8%  
+P8  | G3    | 13         | 2      | 15.4%  
+P9  | G1    | 33         | 2      | 6.1%   
+P10 | G2    | 57         | 12     | 21.1%  
+P12 | G3    | 60         | 6      | 10.0%  
+
+================================================================================
+  Wrong Attempts per FS Task (all participants)
+================================================================================
+Task       | Wrong Attempts
+-----------+---------------
+fs_task_2  | 32            
+fs_task_6  | 3             
+fs_task_10 | 2             
+fs_task_11 | 6             
+fs_task_12 | 3             
+fs_task_13 | 2             
+fs_task_15 | 5             
+fs_task_16 | 1             
+
+================================================================================
+  Hint Usage
+================================================================================
+ID  | Group | Hints
+----+-------+------
+P7  | G1    | 1    
+P12 | G3    | 2    
+
+================================================================================
+  Qualitative Feedback (Open-Ended)
+================================================================================
+
+  P1 (G3):
+    + Useful:     The points and Leaderboard, Fun UI and good UX
+    - Confusing:  nothing, there was a good instruction
+    * Suggestion: no
+
+  P2 (G3):
+    + Useful:     That there was a step for step instruction which also explained the tasks really nice. I didn't know anything about digital forensics and it was really fun to dive a little into it with this game.
+    - Confusing:  Maybe it would be interesting to make a time stamp to see how long you need to complete the task, so you can compete with your colleagues.
+    * Suggestion: As a complete beginner in this field I didn't know when I should make a space between words or letters. So maybe you could highlight the spaces, but I think that people working in this field should know it.
+
+  P4 (G2):
+    * Suggestion: You are the best :)
+
+  P5 (G1):
+    + Useful:     analyze suspicious file magic bytes
+    - Confusing:  nothing
+    * Suggestion: that's enough
+
+  P6 (G2):
+    + Useful:     The sidebar menu is really helpful to keep track of what's the next step in the task, making the experience intuitive to follow
+    - Confusing:  Nothing to note, although I took a while to "find" the hard disk to connect to the station.
+    * Suggestion: First time trying something like this so nothing to add, I found it really enjoyable!
+
+  P7 (G1):
+    + Useful:     the story and the investigation path that follows a forensic logic
+
+  P8 (G3):
+    + Useful:     useful: learning things about writing codes and digital forensics . engaging: definitely the fact that you can move freely and the 3D experience (thanks also the hint)
+    - Confusing:  if you are not a IT person the tasks are a little difficult to understand
+    * Suggestion: No
+
+  P9 (G1):
+    + Useful:     The way it is interactive and the gamification approach to the tasks
+    - Confusing:  Nothing in particular
+    * Suggestion: Extend the list of shell commands simulated
+
+  P10 (G2):
+    + Useful:     The console scene
+    - Confusing:  Sometimes the tab keyboard button for autocompleting path wasn't working
+
+  P11 (G1):
+    + Useful:     The way of interacting with the platform
+    - Confusing:  I found everything really perfect
+
+  P12 (G3):
+    + Useful:     I find the UI/Controls really good and suggestions on each task displayed was really helpful to understand every step in that process.
+    - Confusing:  Sometimes is difficult to understand when you should text a command to looking for a specific file but it's also challenging as a non-IT specialist.
+    * Suggestion: Not, just follow your ideas to future updates.
+
+Generating charts into C:\Users\edogo\Desktop\Antigravity\CyberForeniscs-Arena\forms-evaluationphase\charts/ ...
+python : Traceback (most recent call last):
+In riga:1 car:1
++ python analyze.py 2>&1 | Out-File -Encoding utf8 results.txt; Write-H ...
++ ~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last): 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\edogo\Desktop\Antigravity\CyberForeniscs-Arena\forms-evaluation
+phase\analyze.py", line 681, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\edogo\Desktop\Antigravity\CyberForeniscs-Arena\forms-evaluation
+phase\analyze.py", line 667, in main
+    chart_1_sus(participants, CHART_DIR)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\edogo\Desktop\Antigravity\CyberForeniscs-Arena\forms-evaluation
+phase\analyze.py", line 328, in chart_1_sus
+    print("  \u2713 Chart 1: SUS by group")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\edogo\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1
+252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 
+2: character maps to <undefined>
